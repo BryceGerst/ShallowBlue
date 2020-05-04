@@ -252,7 +252,7 @@ public class ChessGame {
 				}
 				if (valid) {
 					if (captured) {
-						blackSM.add(testMove);
+						blackSM.add(0,testMove);
 					}
 					else {
 						int endCol = (int)testMove.charAt(2) - 97;
@@ -604,10 +604,10 @@ public class ChessGame {
 		int[][] netPressure = new int[8][8];
 		// the following comments show the values that for sure are decent-ish
 		int myTurnMult = 1; // 1;
-		int rawModifier = 15;
+		int rawModifier = 25; // 15
 		int spaceValue = 1; // 1;
-		int pressureModifier = 2; // 2;
-		int castleValue = 7; // 0
+		int pressureModifier = 3; // 2;
+		int castleValue = 10; // 0
 		
 		if (whiteCanCastleQueen || whiteCanCastleKing || whiteCastled) {
 			strength += castleValue;
