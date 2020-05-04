@@ -10,7 +10,7 @@ public class Node2 {
 			p.children.add(this);
 		}
 	}
-	
+	//hello
 	public int compareTo(Node2 n) {
 		return 1;
 	}
