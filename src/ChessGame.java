@@ -164,6 +164,12 @@ public class ChessGame {
 	}
 	
 	private void removeBadMoves() {
+		whitePM = new ArrayList<String>();
+		blackPM = new ArrayList<String>();
+		whiteSM = new ArrayList<String>();
+		blackSM = new ArrayList<String>();
+		boolean captured;
+		boolean valid;
 		Piece[][] originalBoard = dupeBoard(board);
 		if (whitesTurn) {
 			if (whiteCanCastleQueen) {
@@ -177,17 +183,31 @@ public class ChessGame {
 				}
 			}
 			for(int i = 0; i < whiteNPM.size(); i++) {
+				valid = false;
 				board = dupeBoard(originalBoard);
 				String testMove = whiteNPM.get(i);
 				testMove = checkIfPawnUpgrade(testMove);
-				forceMove(testMove);
+				captured = forceMove(testMove);
 				genTestPressure();
 				for (int r = 0; r < 8; r++) {
 					for (int c = 0; c < 8; c++) {
 						if (board[r][c] != null && board[r][c].getTeam().equals("White") && board[r][c].getType().equals("King")) {
 							if(blackPressure[r][c] == 0) {
 								whitePM.add(testMove);
+								valid = true;
 							}
+						}
+					}
+				}
+				if (valid) {
+					if (captured) {
+						whiteSM.add(testMove);
+					}
+					else {
+						int endCol = (int)testMove.charAt(2) - 97;
+						int endRow = Integer.parseInt(testMove.substring(3,4)) - 1;
+						if(!(blackPressure[endRow][endCol] > 0 && whitePressure[endRow][endCol] == 0)) { // basically if piece could NOT be captured without retaliation
+							whiteSM.add(testMove);
 						}
 					}
 				}
@@ -205,17 +225,31 @@ public class ChessGame {
 				}
 			}
 			for(int i = 0; i < blackNPM.size(); i++) {
+				valid = false;
 				board = dupeBoard(originalBoard);
 				String testMove = blackNPM.get(i);
 				testMove = checkIfPawnUpgrade(testMove);
-				forceMove(testMove);
+				captured = forceMove(testMove);
 				genTestPressure();
 				for (int r = 0; r < 8; r++) {
 					for (int c = 0; c < 8; c++) {
 						if (board[r][c] != null && board[r][c].getTeam().equals("Black") && board[r][c].getType().equals("King")) {
 							if(whitePressure[r][c] == 0) {
 								blackPM.add(testMove);
+								valid = true;
 							}
+						}
+					}
+				}
+				if (valid) {
+					if (captured) {
+						blackSM.add(testMove);
+					}
+					else {
+						int endCol = (int)testMove.charAt(2) - 97;
+						int endRow = Integer.parseInt(testMove.substring(3,4)) - 1;
+						if(!(whitePressure[endRow][endCol] > 0 && blackPressure[endRow][endCol] == 0)) { // basically if piece could NOT be captured without retaliation
+							blackSM.add(testMove);
 						}
 					}
 				}
@@ -224,7 +258,8 @@ public class ChessGame {
 		board = dupeBoard(originalBoard);
 	}
 	
-	private void forceMove(String move) {
+	private boolean forceMove(String move) {
+		boolean captured = false;
 		// example, "e2e4"
 		if (move.length() == 4) {	// simple move (meaning no upgrade)
 			int startCol = (int)move.charAt(0) - 97; // 97 is the unicode value for lower case a
@@ -237,6 +272,9 @@ public class ChessGame {
 				board[startRow][startCol] = null;
 				int endCol = (int)move.charAt(2) - 97;
 				int endRow = Integer.parseInt(move.substring(3,4)) - 1;
+				if (board[endRow][endCol] != null) {
+					captured = true;
+				}
 				board[endRow][endCol] = movePiece;
 			}
 		}
@@ -252,9 +290,13 @@ public class ChessGame {
 				board[startRow][startCol] = null;
 				int endCol = (int)move.charAt(2) - 97;
 				int endRow = Integer.parseInt(move.substring(3,4)) - 1;
+				if (board[endRow][endCol] != null) {
+					captured = true;
+				}
 				board[endRow][endCol] = movePiece;
 			}
 		}
+		return captured;
 	}
 	
 	private void printPressure(String teamName) {
@@ -277,16 +319,34 @@ public class ChessGame {
 	}
 	
 	public void outputMove() {
+		// TODO: make this unnecessary
+		generatePressureArrays();
+		removeBadMoves();
+		// ------------------------------
+		ArrayList<String> whiteUM; // white using moves, aka SM if exists, otherwise PM
+		ArrayList<String> blackUM;
+		if (whiteSM.size() > 0) {
+			whiteUM = whiteSM;
+		}
+		else {
+			whiteUM = whitePM;
+		}
+		if (blackSM.size() > 0) {
+			blackUM = blackSM;
+		}
+		else {
+			blackUM = blackPM;
+		}
 		int ind;
 		if (whitesTurn) {
 			ind = recursiveSim(this, whitesTurn, 0, 2)[0];
-			System.out.println(whitePM.get(ind));
-			inputMove(whitePM.get(ind));
+			System.out.println(whiteUM.get(ind));
+			inputMove(whiteUM.get(ind));
 		}
 		else {
 			ind = recursiveSim(this, whitesTurn, 0, 2)[0];
-			System.out.println(blackPM.get(ind));
-			inputMove(blackPM.get(ind));
+			System.out.println(blackUM.get(ind));
+			inputMove(blackUM.get(ind));
 		}
 	}
 	
@@ -311,10 +371,31 @@ public class ChessGame {
 	}
 	
 	private int[] recursiveSim(ChessGame givenGame, boolean forWhite, int level, int maxLevel) {
+		Random ran = new Random();
 		givenGame.generatePressureArrays();
 		givenGame.whitePM = new ArrayList<String>();
 		givenGame.blackPM = new ArrayList<String>();
+		givenGame.whiteSM = new ArrayList<String>();
+		givenGame.blackSM = new ArrayList<String>();
 		givenGame.removeBadMoves();
+		
+		ArrayList<String> whiteUM; // white using moves, aka SM if exists, otherwise PM
+		ArrayList<String> blackUM;
+		if (givenGame.whiteSM.size() > 0) {
+			whiteUM = givenGame.whiteSM;
+			//System.out.println("cut down size by " + (givenGame.whitePM.size() - givenGame.whiteSM.size()));
+		}
+		else {
+			whiteUM = givenGame.whitePM;
+		}
+		if (givenGame.blackSM.size() > 0) {
+			blackUM = givenGame.blackSM;
+			//System.out.println("cut down size by " + (givenGame.blackPM.size() - givenGame.blackSM.size()));
+		}
+		else {
+			blackUM = givenGame.blackPM;
+		}
+		
 		int result;
 		int bestResult = -1000000;
 		int bestIndex = 0;
@@ -327,20 +408,20 @@ public class ChessGame {
 		
 		if (level == maxLevel) { // MAX LEVEL SHOULD ALWAYS BE EVEN
 			if (forWhite) {
-				for (int i = 0; i < givenGame.whitePM.size(); i++) {
+				for (int i = 0; i < whiteUM.size(); i++) {
 					testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure);
-					result = testGame.simGame(givenGame.whitePM.get(i), 0);
-					if (result > bestResult) {
+					result = testGame.simGame(whiteUM.get(i), 0);
+					if (result > bestResult || (result == bestResult && ran.nextInt(2) == 0)) {
 						bestResult = result;
 						bestIndex = i;
 					}
 				}
 			}
 			else {
-				for (int i = 0; i < givenGame.blackPM.size(); i++) {
+				for (int i = 0; i < blackUM.size(); i++) {
 					testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure);
-					result = testGame.simGame(givenGame.blackPM.get(i), 0);
-					if (result > bestResult) {
+					result = testGame.simGame(blackUM.get(i), 0);
+					if (result > bestResult || (result == bestResult && ran.nextInt(2) == 0)) {
 						bestResult = result;
 						bestIndex = i;
 					}
@@ -352,22 +433,22 @@ public class ChessGame {
 		else {
 			if (level % 2 == 0) { // pick the best of this level
 				if (forWhite) {
-					for (int i = 0; i < givenGame.whitePM.size(); i++) {
+					for (int i = 0; i < whiteUM.size(); i++) {
 						testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure);
-						testGame.botInputMove(givenGame.whitePM.get(i));
+						testGame.botInputMove(whiteUM.get(i));
 						result = recursiveSim(testGame, forWhite, level + 1, maxLevel)[1];
-						if (result > bestResult) {
+						if (result > bestResult || (result == bestResult && ran.nextInt(2) == 0)) {
 							bestResult = result;
 							bestIndex = i;
 						}
 					}
 				}
 				else {
-					for (int i = 0; i < givenGame.blackPM.size(); i++) {
+					for (int i = 0; i < blackUM.size(); i++) {
 						testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure);
-						testGame.botInputMove(givenGame.blackPM.get(i));
+						testGame.botInputMove(blackUM.get(i));
 						result = recursiveSim(testGame, forWhite, level + 1, maxLevel)[1];
-						if (result > bestResult) {
+						if (result > bestResult || (result == bestResult && ran.nextInt(2) == 0)) {
 							bestResult = result;
 							bestIndex = i;
 						}
@@ -378,22 +459,22 @@ public class ChessGame {
 			}
 			else { // pick the worst from this level
 				if (forWhite) {
-					for (int i = 0; i < givenGame.blackPM.size(); i++) {
+					for (int i = 0; i < blackUM.size(); i++) {
 						testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure);
-						testGame.botInputMove(givenGame.blackPM.get(i));
+						testGame.botInputMove(blackUM.get(i));
 						result = recursiveSim(testGame, forWhite, level + 1, maxLevel)[1];
-						if (result < worstResult) {
+						if (result < worstResult || (result == worstResult && ran.nextInt(2) == 0)) {
 							worstResult = result;
 							worstIndex = i;
 						}
 					}
 				}
 				else {
-					for (int i = 0; i < givenGame.whitePM.size(); i++) {
+					for (int i = 0; i < whiteUM.size(); i++) {
 						testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure);
-						testGame.botInputMove(givenGame.whitePM.get(i));
+						testGame.botInputMove(whiteUM.get(i));
 						result = recursiveSim(testGame, forWhite, level + 1, maxLevel)[1];
-						if (result < worstResult) {
+						if (result < worstResult || (result == worstResult && ran.nextInt(2) == 0)) {
 							worstResult = result;
 							worstIndex = i;
 						}
@@ -457,7 +538,9 @@ public class ChessGame {
 	public int simGame(String move, int level) {
 		boolean simForWhite = whitesTurn;
 		botInputMove(move);
-		int val = getBoardStrength(simForWhite);
+		boolean whiteCastled = (move.equals("e1g1") || move.equals("e1c1"));
+		boolean blackCastled = (move.equals("e8g8") || move.equals("e8c8"));
+		int val = getBoardStrength(simForWhite, whiteCastled, blackCastled);
 		//System.out.println(val);
 		//System.out.println(this);
 		return val;
@@ -465,7 +548,7 @@ public class ChessGame {
 	
 	
 	
-	public int getBoardStrength(boolean forWhite) {
+	public int getBoardStrength(boolean forWhite, boolean whiteCastled, boolean blackCastled) {
 		generatePressureArrays();
 		removeBadMoves();
 		int strength = 0;
@@ -478,16 +561,10 @@ public class ChessGame {
 		int pressureModifier = 2; // 2;
 		int castleValue = 7; // 0
 		
-		if (whitePM.contains("e1g1")) {
+		if (whiteCanCastleQueen || whiteCanCastleKing || whiteCastled) {
 			strength += castleValue;
 		}
-		if (whitePM.contains("e1c1")) {
-			strength += castleValue;
-		}
-		if (blackPM.contains("e8g8")) {
-			strength -= castleValue;
-		}
-		if (blackPM.contains("e8c8")) {
+		if (blackCanCastleKing || blackCanCastleQueen || blackCastled) {
 			strength -= castleValue;
 		}
 		
@@ -555,8 +632,6 @@ public class ChessGame {
 		generatePressureArrays();
 		//printPressure("White");
 		boolean valid;
-		whitePM = new ArrayList<String>();
-		blackPM = new ArrayList<String>();
 		removeBadMoves();
 		if(whitesTurn) {
 			valid = whitePM.contains(move);

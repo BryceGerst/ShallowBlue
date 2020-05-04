@@ -29,6 +29,9 @@ public class GameRunner {
 				if (resp.equals("bot")) {
 					game.outputMove();
 				}
+				else if (resp.equals("val")) {
+					System.out.println(game.getBoardStrength(true,false,false));
+				}
 				else {
 					boolean valid = game.inputMove(resp);
 					while(!valid) {
