@@ -173,6 +173,15 @@ public class ChessGame {
 	}
 	
 	private void removeBadMoves() {
+		
+		ArrayList<String> freeCaptures = new ArrayList<String>();
+		ArrayList<String> winningCaptures = new ArrayList<String>();
+		ArrayList<String> equalCaptures = new ArrayList<String>();
+		ArrayList<String> nonCaptures = new ArrayList<String>();
+		ArrayList<String> losingCaptures = new ArrayList<String>();
+		ArrayList<String> sacrifices = new ArrayList<String>();
+		
+		
 		whitePM = new ArrayList<String>();
 		blackPM = new ArrayList<String>();
 		whiteSM = new ArrayList<String>();
@@ -196,7 +205,8 @@ public class ChessGame {
 				board = dupeBoard(originalBoard);
 				String testMove = whiteNPM.get(i);
 				testMove = checkIfPawnUpgrade(testMove);
-				captured = forceMove(testMove) > 0;
+				int capturedVal = forceMove(testMove);
+				captured = capturedVal > 0;
 				genTestPressure();
 				for (int r = 0; r < 8; r++) {
 					for (int c = 0; c < 8; c++) {
@@ -209,18 +219,42 @@ public class ChessGame {
 					}
 				}
 				if (valid) {
+					int endCol = (int)testMove.charAt(2) - 97;
+					int endRow = Integer.parseInt(testMove.substring(3,4)) - 1;
+					int blackPressureOn = blackPressure[endRow][endCol];
+					int whitePressureOn = whitePressure[endRow][endCol];
+					int myVal = board[endRow][endCol].getValue();
 					if (captured) {
-						whiteSM.add(testMove);
+						if (blackPressureOn == 0) {
+							freeCaptures.add(testMove);
+						}
+						else if (capturedVal > myVal) {
+							winningCaptures.add(testMove);
+						}
+						else if (capturedVal == myVal) {
+							equalCaptures.add(testMove);
+						}
+						else {
+							losingCaptures.add(testMove);
+						}
+						
 					}
 					else {
-						int endCol = (int)testMove.charAt(2) - 97;
-						int endRow = Integer.parseInt(testMove.substring(3,4)) - 1;
-						if(!(blackPressure[endRow][endCol] > 0 && whitePressure[endRow][endCol] == 0)) { // basically if piece could NOT be captured without retaliation
-							whiteSM.add(testMove);
+						if(blackPressureOn > 0 && whitePressureOn == 0) { // basically if piece could NOT be captured without retaliation
+							sacrifices.add(testMove);
+						}
+						else {
+							nonCaptures.add(testMove);
 						}
 					}
 				}
 			}
+			whiteSM.addAll(freeCaptures);
+			whiteSM.addAll(winningCaptures);
+			whiteSM.addAll(equalCaptures);
+			whiteSM.addAll(nonCaptures);
+			whiteSM.addAll(losingCaptures);
+			// whiteSM.addAll(sacrifices);
 		}
 		else { // black's turn
 			if (blackCanCastleQueen) {
@@ -238,7 +272,8 @@ public class ChessGame {
 				board = dupeBoard(originalBoard);
 				String testMove = blackNPM.get(i);
 				testMove = checkIfPawnUpgrade(testMove);
-				captured = forceMove(testMove) > 0;
+				int capturedVal = forceMove(testMove);
+				captured = capturedVal > 0;
 				genTestPressure();
 				for (int r = 0; r < 8; r++) {
 					for (int c = 0; c < 8; c++) {
@@ -251,18 +286,42 @@ public class ChessGame {
 					}
 				}
 				if (valid) {
+					int endCol = (int)testMove.charAt(2) - 97;
+					int endRow = Integer.parseInt(testMove.substring(3,4)) - 1;
+					int blackPressureOn = blackPressure[endRow][endCol];
+					int whitePressureOn = whitePressure[endRow][endCol];
+					int myVal = board[endRow][endCol].getValue();
 					if (captured) {
-						blackSM.add(0,testMove);
+						if (whitePressureOn == 0) {
+							freeCaptures.add(testMove);
+						}
+						else if (capturedVal > myVal) {
+							winningCaptures.add(testMove);
+						}
+						else if (capturedVal == myVal) {
+							equalCaptures.add(testMove);
+						}
+						else {
+							losingCaptures.add(testMove);
+						}
+						
 					}
 					else {
-						int endCol = (int)testMove.charAt(2) - 97;
-						int endRow = Integer.parseInt(testMove.substring(3,4)) - 1;
-						if(!(whitePressure[endRow][endCol] > 0 && blackPressure[endRow][endCol] == 0)) { // basically if piece could NOT be captured without retaliation
-							blackSM.add(testMove);
+						if(whitePressureOn > 0 && blackPressureOn == 0) { // basically if piece could NOT be captured without retaliation
+							sacrifices.add(testMove);
+						}
+						else {
+							nonCaptures.add(testMove);
 						}
 					}
 				}
 			}
+			blackSM.addAll(freeCaptures);
+			blackSM.addAll(winningCaptures);
+			blackSM.addAll(equalCaptures);
+			blackSM.addAll(nonCaptures);
+			blackSM.addAll(losingCaptures);
+			// whiteSM.addAll(sacrifices);
 		}
 		board = dupeBoard(originalBoard);
 	}
