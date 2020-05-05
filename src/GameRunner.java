@@ -28,7 +28,7 @@ public class GameRunner {
 					whiteNode = game.outputMove(whiteNode);
 				}
 				moveInd = whiteNode.getInd();
-				System.out.println("White: " + whiteNode.getHeight());
+				//System.out.println("White: " + whiteNode.getHeight());
 				if (blackNode != null) {
 					blackNode = blackNode.goToNode(moveInd);
 				}
@@ -39,10 +39,10 @@ public class GameRunner {
 					blackNode = game.outputMove();
 				}
 				else {
-					blackNode = game.outputMove();//blackNode);
+					blackNode = game.outputMove(blackNode);
 				}
 				moveInd = blackNode.getInd();
-				System.out.println("Black: " + blackNode.getHeight());
+				//System.out.println("Black: " + blackNode.getHeight());
 				
 				whiteNode = whiteNode.goToNode(moveInd);
 				
@@ -59,7 +59,7 @@ public class GameRunner {
 						botNode = game.outputMove();
 					}
 					else {
-						botNode = game.outputMove();//botNode);
+						botNode = game.outputMove(botNode);
 					}
 				}
 				else if (resp.equals("val")) {

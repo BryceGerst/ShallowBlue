@@ -2,7 +2,7 @@ import java.util.ArrayList;
 
 public class Node {
 	private int index;
-	private ArrayList<Node> bestOrder;
+	public ArrayList<Node> bestOrder;
 	private ArrayList<Integer> values;
 	private boolean sortByBest;
 	public Node (int ind, boolean sortByBest) {
@@ -107,7 +107,7 @@ public class Node {
 	}
 	
 	public String toString() {
-		return "this should be true: " + sortByBest + " and this should match the real and node " + index;
+		return "Sort High: " + sortByBest + " Index " + index;
 	}
 	
 	public int[] getBestOrder() {
