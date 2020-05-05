@@ -11,6 +11,52 @@ public class Node {
 		values = new ArrayList<Integer>();
 		this.sortByBest = sortByBest;
 	}
+	
+	public Node goToNode(int ind) {
+		for (int i = 0; i < bestOrder.size(); i++) {
+			Node c = bestOrder.get(i);
+			if (c.index == ind) {
+				return c;
+			}
+		}
+		System.out.println("Error locating node");
+		return null;
+	}
+	
+	public int getIndex() {
+		return index;
+	}
+	
+	public Node removeNode() {
+		Node n = bestOrder.remove(0);
+		values.remove(0);
+		//System.out.println("Error locating node");
+		return n;
+	}
+	
+	public Node getNode(int ind) {
+		return bestOrder.get(ind);
+	}
+	
+	public Node removeNode(int ind) {
+		for (int i = 0; i < bestOrder.size(); i++) {
+			Node c = bestOrder.get(i);
+			if (c.index == ind) {
+				bestOrder.remove(i);
+				values.remove(i);
+				return c;
+			}
+		}
+		System.out.println("Error deleting node");
+		return null;
+	}
+	
+	
+	public void addNodeToEnd(Node n) {
+		values.add(values.get(values.size()-1));
+		bestOrder.add(n);
+	}
+	
 	public void addNode(Node n, int val) {
 		if(values.size() == 0) {
 			values.add(val);
@@ -46,6 +92,10 @@ public class Node {
 	
 	public int getInd() {
 		return index;
+	}
+	
+	public String toString() {
+		return "this should be true: " + sortByBest + " and this should match the real and node " + index;
 	}
 	
 	public int[] getBestOrder() {

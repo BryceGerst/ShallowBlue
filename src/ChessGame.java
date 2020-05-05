@@ -396,7 +396,7 @@ public class ChessGame {
 		}
 	}
 	
-	public void outputMove() {
+	public Node outputMove() {
 		// TODO: make this unnecessary
 		generatePressureArrays();
 		removeBadMoves();
@@ -432,6 +432,45 @@ public class ChessGame {
 			System.out.println(blackUM.get(ind));
 			inputMove(blackUM.get(ind));
 		}
+		return og.goToNode(ind);
+	}
+	
+	public Node outputMove(Node given) {
+		// TODO: make this unnecessary
+		generatePressureArrays();
+		removeBadMoves();
+		// ------------------------------
+		ArrayList<String> whiteUM; // white using moves, aka SM if exists, otherwise PM
+		ArrayList<String> blackUM;
+		if (whiteSM.size() > 0) {
+			whiteUM = whiteSM;
+		}
+		else {
+			whiteUM = whitePM;
+		}
+		if (blackSM.size() > 0) {
+			blackUM = blackSM;
+		}
+		else {
+			blackUM = blackPM;
+		}
+		int ind;
+		
+		if (whitesTurn) {
+			ind = recursiveSim(this, whitesTurn, 0, 2, Integer.MAX_VALUE, given)[0];
+			System.out.println("Real: " + ind);
+			System.out.println("Node: " + given.getBestOrder()[0]);
+			System.out.println(whiteUM.get(ind));
+			inputMove(whiteUM.get(ind));
+		}
+		else {
+			ind = recursiveSim(this, whitesTurn, 0, 2, Integer.MAX_VALUE, given)[0];
+			System.out.println("Real: " + ind);
+			System.out.println("Node: " + given.getBestOrder()[0]);
+			System.out.println(blackUM.get(ind));
+			inputMove(blackUM.get(ind));
+		}
+		return given.goToNode(ind);
 	}
 	
 	public boolean getTurn() {
@@ -455,7 +494,7 @@ public class ChessGame {
 	}
 	
 	private int[] recursiveSim(ChessGame givenGame, boolean forWhite, int level, int maxLevel, int alpha, Node current) {
-		Random ran = new Random();
+		//Random ran = new Random();
 		givenGame.generatePressureArrays();
 		givenGame.whitePM = new ArrayList<String>();
 		givenGame.blackPM = new ArrayList<String>();
@@ -480,6 +519,25 @@ public class ChessGame {
 			blackUM = givenGame.blackPM;
 		}
 		
+		ArrayList<String> UM;
+		
+		if (forWhite) {
+			if (level % 2 == 0) {
+				UM = whiteUM;
+			}
+			else {
+				UM = blackUM;
+			}
+		}
+		else {
+			if (level % 2 == 0) {
+				UM = blackUM;
+			}
+			else {
+				UM = whiteUM;
+			}
+		}
+		
 		
 		int result;
 		int bestResult = Integer.MIN_VALUE;
@@ -491,35 +549,43 @@ public class ChessGame {
 		
 		ChessGame testGame;
 		
+		int[] bestOrder = current.getBestOrder();
+		
 		
 		if (level == maxLevel) { // MAX LEVEL SHOULD ALWAYS BE EVEN
-			if (forWhite) {
-				for (int i = 0; i < whiteUM.size(); i++) {
+			if (bestOrder.length > 0) {
+				if (bestOrder.length > UM.size()) System.out.println("you shouldnt see this 0_0");
+				int i;
+				for (int a = 0; a < bestOrder.length; a++) {
+					i = bestOrder[a];
 					testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure, givenGame.whitePoints, givenGame.blackPoints);
-					result = testGame.simGame(whiteUM.get(i), 0);
-					Node child = new Node(i, true);
+					result = testGame.simGame(UM.get(i), 0);
+					Node child = current.removeNode();
 					current.addNode(child, result);
 					if (result > alpha) {
-						//System.out.println("Saved from checking " + (whiteUM.size() - i - 1) + " options");
+						//System.out.println("Saved from checking " + (bestOrder.length - a - 1) + " options level 0");
+						for (int b = a + 1; b < bestOrder.length; b++) {
+							current.removeNode(bestOrder[b]);
+						}
 						return new int[] {0,Integer.MAX_VALUE};
 					}
-					else if (result > bestResult || (result == bestResult && ran.nextInt(2) == 0)) {
+					else if (result > bestResult) { // || (result == bestResult && ran.nextInt(2) == 0)) {
 						bestResult = result;
 						bestIndex = i;
 					}
 				}
 			}
 			else {
-				for (int i = 0; i < blackUM.size(); i++) {
+				for (int i = 0; i < UM.size(); i++) {
 					testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure, givenGame.whitePoints, givenGame.blackPoints);
-					result = testGame.simGame(blackUM.get(i), 0);
+					result = testGame.simGame(UM.get(i), 0);
 					Node child = new Node(i, true);
 					current.addNode(child, result);
 					if (result > alpha) {
-						//System.out.println("Saved from checking " + (blackUM.size() - i - 1) + " options");
+						//System.out.println("Saved from checking " + (whiteUM.size() - i - 1) + " options");
 						return new int[] {0,Integer.MAX_VALUE};
 					}
-					if (result > bestResult || (result == bestResult && ran.nextInt(2) == 0)) {
+					else if (result > bestResult) { // || (result == bestResult && ran.nextInt(2) == 0)) {
 						bestResult = result;
 						bestIndex = i;
 					}
@@ -530,35 +596,42 @@ public class ChessGame {
 		}
 		else {
 			if (level % 2 == 0) { // pick the best of this level
-				if (forWhite) {
-					for (int i = 0; i < whiteUM.size(); i++) {
-						Node child = new Node(i, true);
+				if (bestOrder.length > 0) {
+					if (bestOrder.length > UM.size()) System.out.println("zoinks");
+					int i;
+					for (int a = 0; a < bestOrder.length; a++) {
+						i = bestOrder[a];
+						Node child = current.removeNode();
+						//System.out.println(child + " is not the same as " + current);
 						testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure, givenGame.whitePoints, givenGame.blackPoints);
-						testGame.botInputMove(whiteUM.get(i));
+						testGame.botInputMove(UM.get(i));
 						result = recursiveSim(testGame, forWhite, level + 1, maxLevel, bestResult, child)[1];
 						current.addNode(child, result);
 						if (result > alpha) {
-							//System.out.println("Saved from checking " + (whiteUM.size() - i - 1) + " options");
+							//System.out.println("Saved from checking " + (bestOrder.length - a - 1) + " options level 1");
+							for (int b = a + 1; b < bestOrder.length; b++) {
+								current.removeNode(bestOrder[b]);
+							}
 							return new int[] {0,Integer.MAX_VALUE};
 						}
-						else if (result > bestResult || (result == bestResult && ran.nextInt(2) == 0)) {
+						else if (result > bestResult) { // || (result == bestResult && ran.nextInt(2) == 0)) {
 							bestResult = result;
 							bestIndex = i;
 						}
 					}
 				}
 				else {
-					for (int i = 0; i < blackUM.size(); i++) {
+					for (int i = 0; i < UM.size(); i++) {
 						Node child = new Node(i, true);
 						testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure, givenGame.whitePoints, givenGame.blackPoints);
-						testGame.botInputMove(blackUM.get(i));
+						testGame.botInputMove(UM.get(i));
 						result = recursiveSim(testGame, forWhite, level + 1, maxLevel, bestResult, child)[1];
 						current.addNode(child, result);
 						if (result > alpha) {
-							//System.out.println("Saved from checking " + (blackUM.size() - i - 1) + " options");
+							//System.out.println("Saved from checking " + (whiteUM.size() - i - 1) + " options");
 							return new int[] {0,Integer.MAX_VALUE};
 						}
-						else if (result > bestResult || (result == bestResult && ran.nextInt(2) == 0)) {
+						else if (result > bestResult) { // || (result == bestResult && ran.nextInt(2) == 0)) {
 							bestResult = result;
 							bestIndex = i;
 						}
@@ -568,35 +641,41 @@ public class ChessGame {
 				ret[1] = bestResult;
 			}
 			else { // pick the worst from this level
-				if (forWhite) {
-					for (int i = 0; i < blackUM.size(); i++) {
-						Node child = new Node(i, false);
+				if (bestOrder.length > 0) {
+					if (bestOrder.length > UM.size()) System.out.println("big uh oh " + (current));
+					int i;
+					for (int a = 0; a < bestOrder.length; a++) {
+						i = bestOrder[a];
+						Node child = current.removeNode();
 						testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure, givenGame.whitePoints, givenGame.blackPoints);
-						testGame.botInputMove(blackUM.get(i));
+						testGame.botInputMove(UM.get(i));
 						result = recursiveSim(testGame, forWhite, level + 1, maxLevel, worstResult, child)[1];
 						current.addNode(child, result);
 						if (result < alpha) {
-							//System.out.println("Saved from checking " + (blackUM.size() - i - 1) + " options");
+							//System.out.println("Saved from checking " + (bestOrder.length - a - 1) + " options level 2");
+							for (int b = a + 1; b < bestOrder.length; b++) {
+								current.removeNode(bestOrder[b]);
+							}
 							return new int[] {0,Integer.MIN_VALUE};
 						}
-						else if (result < worstResult || (result == worstResult && ran.nextInt(2) == 0)) {
+						else if (result < worstResult) { // || (result == worstResult && ran.nextInt(2) == 0)) {
 							worstResult = result;
 							worstIndex = i;
 						}
 					}
 				}
 				else {
-					for (int i = 0; i < whiteUM.size(); i++) {
+					for (int i = 0; i < UM.size(); i++) {
 						Node child = new Node(i, false);
 						testGame = new ChessGame(givenGame.getBoard(), givenGame.getWK(), givenGame.getWQ(), givenGame.getBK(), givenGame.getBQ(), givenGame.getTurn(), givenGame.whitePM, givenGame.blackPM, givenGame.whitePressure, givenGame.blackPressure, givenGame.whitePoints, givenGame.blackPoints);
-						testGame.botInputMove(whiteUM.get(i));
+						testGame.botInputMove(UM.get(i));
 						result = recursiveSim(testGame, forWhite, level + 1, maxLevel, worstResult, child)[1];
 						current.addNode(child, result);
 						if (result < alpha) {
-							//System.out.println("Saved from checking " + (whiteUM.size() - i - 1) + " options");
+							//System.out.println("Saved from checking " + (blackUM.size() - i - 1) + " options");
 							return new int[] {0,Integer.MIN_VALUE};
 						}
-						else if (result < worstResult || (result == worstResult && ran.nextInt(2) == 0)) {
+						else if (result < worstResult) { // || (result == worstResult && ran.nextInt(2) == 0)) {
 							worstResult = result;
 							worstIndex = i;
 						}
@@ -763,19 +842,21 @@ public class ChessGame {
 	
 	
 	
-	public boolean inputMove(String move) {
+	public int inputMove(String move) {
 		previousBoard = dupeBoard(board);
 		//Random ran = new Random();
 		generatePressureArrays();
 		//printPressure("White");
 		boolean valid;
+		int ind;
 		removeBadMoves();
 		if(whitesTurn) {
-			valid = whitePM.contains(move);
+			ind = whiteSM.indexOf(move);
 		}
 		else {
-			valid = blackPM.contains(move);
+			ind = blackSM.indexOf(move);
 		}
+		valid = ind >= 0;
 		if (valid) {
 			// castling stuff
 			if (move.contains("e1")) {
@@ -822,11 +903,11 @@ public class ChessGame {
 			}
 			// end second castling stuff
 			whitesTurn = !whitesTurn;
-			return true;
+			return ind;
 		}
 		else {
 			System.out.println("illegal move");
-			return false;
+			return ind;
 		}
 	}
 	
