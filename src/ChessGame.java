@@ -193,11 +193,13 @@ public class ChessGame {
 			if (whiteCanCastleQueen) {
 				if(board[0][1] == null && board[0][2] == null && board[0][3] == null && blackPressure[0][2] == 0 && blackPressure[0][3] == 0 && blackPressure[0][4] == 0) {
 					whitePM.add("e1c1");
+					whiteSM.add("e1c1");
 				}
 			}
 			if (whiteCanCastleKing) {
 				if(board[0][5] == null && board[0][6] == null && blackPressure[0][5] == 0 && blackPressure[0][6] == 0 && blackPressure[0][4] == 0) {
 					whitePM.add("e1g1");
+					whiteSM.add("e1g1");
 				}
 			}
 			for(int i = 0; i < whiteNPM.size(); i++) {
@@ -260,11 +262,13 @@ public class ChessGame {
 			if (blackCanCastleQueen) {
 				if(board[7][1] == null && board[7][2] == null && board[7][3] == null && whitePressure[7][2] == 0 && whitePressure[7][3] == 0 && whitePressure[7][4] == 0) {
 					blackPM.add("e8c8");
+					blackSM.add("e8g8");
 				}
 			}
 			if (blackCanCastleKing) {
 				if(board[7][5] == null && board[7][6] == null && whitePressure[7][5] == 0 && whitePressure[7][6] == 0 && whitePressure[7][4] == 0) {
 					blackPM.add("e8g8");
+					blackSM.add("e8g8");
 				}
 			}
 			for(int i = 0; i < blackNPM.size(); i++) {
@@ -322,6 +326,12 @@ public class ChessGame {
 			blackSM.addAll(nonCaptures);
 			blackSM.addAll(losingCaptures);
 			blackSM.addAll(sacrifices);
+		}
+		if (!whitesTurn && blackSM.size() != blackPM.size()) {
+			System.out.println("error, black sizes not equal");
+		}
+		if (whitesTurn && whiteSM.size() != whitePM.size()) {
+			System.out.println("error, white sizes not equal");
 		}
 		board = dupeBoard(originalBoard);
 	}
