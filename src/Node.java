@@ -24,6 +24,21 @@ public class Node {
 		return index;
 	}
 	
+	public int getHeight() {
+		int height = 0;
+		Node current = this;
+		System.out.println("-------------------------");
+		while (current.bestOrder.size() != 0) {
+			System.out.println(current);
+			height++;
+			current = current.bestOrder.get(0);
+			
+		}
+		System.out.println("-------------------------");
+		return height;
+		
+	}
+	
 	public Node removeNode() {
 		Node n = bestOrder.remove(0);
 		values.remove(0);
