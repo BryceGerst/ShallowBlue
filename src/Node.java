@@ -13,12 +13,9 @@ public class Node {
 	}
 	
 	public Node goToNode(int ind) {
-		for (int i = 0; i < bestOrder.size(); i++) {
-			Node c = bestOrder.get(i);
-			if (c.index == ind) {
-				return c;
-			}
-		}
+		for(Node n:bestOrder) 
+			if(n.index==ind)
+				return n;
 		System.out.println("Error locating node");
 		return null;
 	}
