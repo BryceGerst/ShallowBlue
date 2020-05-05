@@ -21,7 +21,7 @@ public class ChessGame {
 	private ArrayList<String> blackNPM;
 	private ArrayList<String> blackPM;
 	private ArrayList<String> blackSM;
-	
+	//TESTING COMMIT
 	private int whitePoints;
 	private int blackPoints;
 	
