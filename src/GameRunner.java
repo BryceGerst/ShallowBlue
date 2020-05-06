@@ -9,6 +9,14 @@ public class GameRunner {
 		Scanner input = new Scanner(System.in);
 		boolean running = true;
 		String resp;
+		
+//		int[] info = game.makeMove("e2e4");
+//		System.out.println(game);
+//		game.unmakeMove("e2e4", info);
+//		System.out.println(game);
+		
+		
+		
 		System.out.print("Bot only game? (Y/N): ");
 		resp = input.nextLine();
 		
@@ -19,8 +27,11 @@ public class GameRunner {
 		
 		int moveInd;
 		
+		int turns = 0;
+		
 		if (resp.equals("Y")) {
-			while (true) {
+			while (turns < 100) {
+				turns++;
 //				if (whiteNode == null) {
 //					whiteNode = game.outputMove();
 //				}

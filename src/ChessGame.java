@@ -220,13 +220,13 @@ public class ChessGame {
 					for (int c = 0; c < 8; c++) {
 						if (board[r][c] != null && board[r][c].getTeam().equals("White") && board[r][c].getType().equals("King")) {
 							if(blackPressure[r][c] == 0) {
-								whitePM.add(testMove);
 								valid = true;
 							}
 						}
 					}
 				}
 				if (valid) {
+					whitePM.add(testMove);
 					int endCol = (int)testMove.charAt(2) - 97;
 					int endRow = Integer.parseInt(testMove.substring(3,4)) - 1;
 					int blackPressureOn = blackPressure[endRow][endCol];
@@ -268,7 +268,7 @@ public class ChessGame {
 			if (blackCanCastleQueen) {
 				if(board[7][1] == null && board[7][2] == null && board[7][3] == null && whitePressure[7][2] == 0 && whitePressure[7][3] == 0 && whitePressure[7][4] == 0) {
 					blackPM.add("e8c8");
-					blackSM.add("e8g8");
+					blackSM.add("e8c8");
 				}
 			}
 			if (blackCanCastleKing) {
@@ -289,13 +289,13 @@ public class ChessGame {
 					for (int c = 0; c < 8; c++) {
 						if (board[r][c] != null && board[r][c].getTeam().equals("Black") && board[r][c].getType().equals("King")) {
 							if(whitePressure[r][c] == 0) {
-								blackPM.add(testMove);
 								valid = true;
 							}
 						}
 					}
 				}
 				if (valid) {
+					blackPM.add(testMove);
 					int endCol = (int)testMove.charAt(2) - 97;
 					int endRow = Integer.parseInt(testMove.substring(3,4)) - 1;
 					int blackPressureOn = blackPressure[endRow][endCol];
@@ -335,9 +335,13 @@ public class ChessGame {
 		}
 		if (!whitesTurn && blackSM.size() != blackPM.size()) {
 			System.out.println("error, black sizes not equal");
+			System.out.println("SM: " + blackSM);
+			System.out.println("PM: " + blackPM);
 		}
 		if (whitesTurn && whiteSM.size() != whitePM.size()) {
 			System.out.println("error, white sizes not equal");
+			System.out.println("SM: " + whiteSM);
+			System.out.println("PM: " + whitePM);
 		}
 		board = dupeBoard(originalBoard);
 	}
@@ -515,11 +519,17 @@ public class ChessGame {
 		
 		if (whitesTurn) UM = whiteSM;
 		else UM = blackSM;
+		//System.out.println("Whites turn? " + whitesTurn);
+		//System.out.println(UM);
 		
 		int bestInd = alphaBetaMax(Integer.MIN_VALUE, Integer.MAX_VALUE, 5)[1];
 		String bestMove = UM.get(bestInd);
 		System.out.println(bestMove);
 		inputMove(bestMove);
+		//generatePressureArrays();
+		//removeBadMoves();
+		//System.out.println(whiteNPM);
+		//System.out.println(blackNPM);
 	}
 	
 	private int[] alphaBetaMax(int alpha, int beta, int depthLeft) {
@@ -585,7 +595,7 @@ public class ChessGame {
 		}
 	}
 	
-	private int[] makeMove(String move) {
+	public int[] makeMove(String move) {
 		int[] info = new int[8];
 		int capturedVal = 0;
 		int capturedNum = -1;
@@ -635,17 +645,15 @@ public class ChessGame {
 		else {
 			whitePoints -= capturedVal;
 		}
-		// second castling stuff
-		
-		// end second castling stuff
+
 		whitesTurn = !whitesTurn;
 		return info;
 		
 	}
 	
-	private void unmakeMove(String move, int[] info) {
+	public void unmakeMove(String move, int[] info) {
 		// unpacking info
-		
+		whitesTurn = !whitesTurn;
 		
 		whiteCanCastleQueen = (info[0] == 1);
 		whiteCanCastleKing = (info[1] == 1);
@@ -693,6 +701,7 @@ public class ChessGame {
 			}
 			forceMove(antimove);
 			if (capturedVal != 0) {
+				//System.out.println("I enjoy eating");
 				board[endRow][endCol] = new Piece(capturedNum, capturedTeam);
 			}
 		}
@@ -702,6 +711,7 @@ public class ChessGame {
 				board[endRow][endCol] = null;
 			}
 			else {
+				//System.out.println("brogars");
 				board[endRow][endCol] = new Piece(capturedNum, capturedTeam);
 			}
 			
