@@ -569,7 +569,25 @@ public class ChessGame {
 			int score;
 			int[] moveInfo;
 			int betaInd = 0;
-			
+			ArrayList<ChessThread> threads=new ArrayList<ChessThread>();
+			for(int i=0; i<UM.size(); i++) {
+				threads.add(new ChessThread(UM.get(i),alpha,beta,depthLeft,i));
+			}
+			for(ChessThread t:threads)
+				t.start();
+			boolean done=false;
+			while(!done) {
+				for(int i=0; i<threads.size(); i++) {
+					ChessThread t=threads.get(i);
+					if(t.result!=null) {
+						int []r=t.result;
+						for(int j=0; j<threads.size(); j++) {
+							threads.get(j).interrupt();
+						}
+						return r;
+					}
+				}
+			}
 			for (int i = 0; i < UM.size(); i++) {
 				testMove = UM.get(i);
 				moveInfo = makeMove(testMove);
@@ -584,7 +602,35 @@ public class ChessGame {
 			return new int[] {beta, betaInd};
 		}
 	}
-	
+	class ChessThread extends Thread{
+		String TestMove;
+		String testMove;
+		int score;
+		int[] moveInfo;
+		int betaInd = 0;
+		int alpha;
+		int beta;
+		int depthLeft;
+		public int[]result;
+		public int i;
+		public ChessThread(String move,int a,int b,int d,int ind) {
+			TestMove=move;			
+			alpha=a;
+			beta=b;
+			depthLeft=d;
+			i=ind;
+		}
+		public void run() {
+			moveInfo = makeMove(testMove);
+			score = alphaBetaMax(alpha, beta, depthLeft - 1)[0];
+			unmakeMove(testMove, moveInfo);
+			if (score <= alpha) result= new int[] {alpha, 0};
+			else if (score < beta) {
+				beta = score;
+				betaInd = i;
+			}
+		}
+	}
 	private int[] makeMove(String move) {
 		int[] info = new int[8];
 		int capturedVal = 0;
