@@ -25,6 +25,9 @@ public class ChessGame {
 	private int whitePoints;
 	private int blackPoints;
 	
+	private boolean whiteCastled;
+	private boolean blackCastled;
+	
 	
 	
 	// Constructor
@@ -37,6 +40,9 @@ public class ChessGame {
 		whiteCanCastleQueen = true;
 		blackCanCastleKing = true;
 		blackCanCastleQueen = true;
+		
+		whiteCastled = false;
+		blackCastled = false;
 		
 		whitesTurn = true;
 		
@@ -207,7 +213,7 @@ public class ChessGame {
 				board = dupeBoard(originalBoard);
 				String testMove = whiteNPM.get(i);
 				testMove = checkIfPawnUpgrade(testMove);
-				int capturedVal = forceMove(testMove);
+				int capturedVal = forceMove(testMove)[0];
 				captured = capturedVal > 0;
 				genTestPressure();
 				for (int r = 0; r < 8; r++) {
@@ -276,7 +282,7 @@ public class ChessGame {
 				board = dupeBoard(originalBoard);
 				String testMove = blackNPM.get(i);
 				testMove = checkIfPawnUpgrade(testMove);
-				int capturedVal = forceMove(testMove);
+				int capturedVal = forceMove(testMove)[0];
 				captured = capturedVal > 0;
 				genTestPressure();
 				for (int r = 0; r < 8; r++) {
@@ -336,8 +342,9 @@ public class ChessGame {
 		board = dupeBoard(originalBoard);
 	}
 	
-	private int forceMove(String move) {
+	private int[] forceMove(String move) {
 		int capturedVal = 0;
+		int capturedNum = -1;
 		// example, "e2e4"
 		if (move.length() == 4) {	// simple move (meaning no upgrade)
 			int startCol = (int)move.charAt(0) - 97; // 97 is the unicode value for lower case a
@@ -352,6 +359,7 @@ public class ChessGame {
 				int endRow = Integer.parseInt(move.substring(3,4)) - 1;
 				if (board[endRow][endCol] != null) {
 					capturedVal = board[endRow][endCol].getValue();
+					capturedNum = board[endRow][endCol].getNum();
 				}
 				board[endRow][endCol] = movePiece;
 			}
@@ -370,11 +378,12 @@ public class ChessGame {
 				int endRow = Integer.parseInt(move.substring(3,4)) - 1;
 				if (board[endRow][endCol] != null) {
 					capturedVal = board[endRow][endCol].getValue();
+					capturedNum = board[endRow][endCol].getNum();
 				}
 				board[endRow][endCol] = movePiece;
 			}
 		}
-		return capturedVal;
+		return new int[]{capturedVal, capturedNum};
 	}
 	
 	private void printPressure(String teamName) {
@@ -496,6 +505,209 @@ public class ChessGame {
 	}
 	public boolean getBQ() {
 		return blackCanCastleQueen;
+	}
+	
+	public void botMove() {
+		generatePressureArrays();
+		removeBadMoves();
+		
+		ArrayList<String> UM;
+		
+		if (whitesTurn) UM = whiteSM;
+		else UM = blackSM;
+		
+		int bestInd = alphaBetaMax(Integer.MIN_VALUE, Integer.MAX_VALUE, 5)[1];
+		String bestMove = UM.get(bestInd);
+		System.out.println(bestMove);
+		inputMove(bestMove);
+	}
+	
+	private int[] alphaBetaMax(int alpha, int beta, int depthLeft) {
+		if (depthLeft == 0) return new int[] {getBoardStrength(), 0};
+		else {
+			generatePressureArrays();
+			removeBadMoves();
+			
+			ArrayList<String> UM;
+			
+			if (whitesTurn) UM = whiteSM;
+			else UM = blackSM;
+			
+			String testMove;
+			int score;
+			int[] moveInfo;
+			int alphaInd = 0;
+			
+			for (int i = 0; i < UM.size(); i++) {
+				testMove = UM.get(i);
+				moveInfo = makeMove(testMove);
+				score = alphaBetaMin(alpha, beta, depthLeft - 1)[0];
+				unmakeMove(testMove, moveInfo);
+				if (score >= beta) return new int[] {beta, 0};
+				else if (score > alpha) {
+					alpha = score;
+					alphaInd = i;
+					
+				}
+			}
+			return new int[] {alpha, alphaInd};
+		}
+	}
+	
+	private int[] alphaBetaMin(int alpha, int beta, int depthLeft) {
+		if (depthLeft == 0) return new int[] {-1* getBoardStrength(), 0};
+		else {
+			generatePressureArrays();
+			removeBadMoves();
+			
+			ArrayList<String> UM;
+			
+			if (whitesTurn) UM = whiteSM;
+			else UM = blackSM;
+			
+			String testMove;
+			int score;
+			int[] moveInfo;
+			int betaInd = 0;
+			
+			for (int i = 0; i < UM.size(); i++) {
+				testMove = UM.get(i);
+				moveInfo = makeMove(testMove);
+				score = alphaBetaMax(alpha, beta, depthLeft - 1)[0];
+				unmakeMove(testMove, moveInfo);
+				if (score <= alpha) return new int[] {alpha, 0};
+				else if (score < beta) {
+					beta = score;
+					betaInd = i;
+				}
+			}
+			return new int[] {beta, betaInd};
+		}
+	}
+	
+	private int[] makeMove(String move) {
+		int[] info = new int[8];
+		int capturedVal = 0;
+		int capturedNum = -1;
+		if (whiteCastled) info[2] = 1;
+		else {
+			if (whiteCanCastleQueen) info[0] = 1;
+			if (whiteCanCastleKing) info[1] = 1;
+		}
+		if (blackCastled) info[5] = 1;
+		else {
+			if (blackCanCastleQueen) info[3] = 1;
+			if (blackCanCastleKing) info[4] = 1;
+		}
+		
+		if (whiteCanCastleQueen && move.equals("e1c1")) {
+			whiteCastled = true;
+			forceMove("a1d1");
+		}
+		else if (whiteCanCastleKing && move.equals("e1g1")) {
+			whiteCastled = true;
+			forceMove("h1f1");
+		}
+		else if (blackCanCastleQueen && move.equals("e8c8")) {
+			blackCastled = true;
+			forceMove("a8d8");
+		}
+		else if (blackCanCastleKing && move.equals("e8g8")) {
+			blackCastled = true;
+			forceMove("h8f8");
+		}
+		
+		if (move.contains("e1")) { whiteCanCastleQueen = false; whiteCanCastleKing = false; }
+		else if (move.contains("a1")) { whiteCanCastleQueen = false; }
+		else if (move.contains("h1")) { whiteCanCastleKing = false; }
+		else if (move.contains("e8")) { blackCanCastleQueen = false; blackCanCastleKing = false; }
+		else if (move.contains("a8")) { blackCanCastleQueen = false; }
+		else if (move.contains("h8")) { blackCanCastleKing = false; }
+		// end first castling stuff
+		int[] capturedInfo = forceMove(move);
+		capturedVal = capturedInfo[0];
+		capturedNum = capturedInfo[1];
+		info[6] = capturedVal;
+		info[7] = capturedNum;
+		if (whitesTurn) {
+			blackPoints -= capturedVal;
+		}
+		else {
+			whitePoints -= capturedVal;
+		}
+		// second castling stuff
+		
+		// end second castling stuff
+		whitesTurn = !whitesTurn;
+		return info;
+		
+	}
+	
+	private void unmakeMove(String move, int[] info) {
+		// unpacking info
+		
+		
+		whiteCanCastleQueen = (info[0] == 1);
+		whiteCanCastleKing = (info[1] == 1);
+		whiteCastled = (info[2] == 1);
+		blackCanCastleQueen = (info[3] == 1);
+		blackCanCastleKing = (info[4] == 1);
+		blackCastled = (info[5] == 1);
+		
+		int capturedVal = info[6];
+		int capturedNum = info[7];
+		String capturedTeam;
+		if (whitesTurn) {
+			capturedTeam = "Black";
+		}
+		else {
+			capturedTeam = "White";
+		}
+		
+		String antimove = move.substring(2, 4) + move.substring(0,2);
+		int startCol = (int)move.charAt(0) - 97; // 97 is the unicode value for lower case a
+		int startRow = Integer.parseInt(move.substring(1,2)) - 1; // minus 1 for zero based indexing
+		int endCol = (int)move.charAt(2) - 97;
+		int endRow = Integer.parseInt(move.substring(3,4)) - 1;
+		
+		
+		if (move.length() == 4) {
+			if (whitesTurn && !whiteCastled) {
+				if (whiteCanCastleQueen && move.equals("e1c1")) {
+					forceMove("d1a1");
+				}
+				else if (whiteCanCastleKing && move.equals("e1g1")) {
+					whiteCastled = true;
+					forceMove("f1h1");
+				}
+			}
+			else if (!whitesTurn && !blackCastled) {
+				if (blackCanCastleQueen && move.equals("e8c8")) {
+					blackCastled = true;
+					forceMove("d8a8");
+				}
+				else if (blackCanCastleKing && move.equals("e8g8")) {
+					blackCastled = true;
+					forceMove("f8h8");
+				}
+			}
+			forceMove(antimove);
+			if (capturedVal != 0) {
+				board[endRow][endCol] = new Piece(capturedNum, capturedTeam);
+			}
+		}
+		else {
+			board[startRow][startCol] = new Piece("Pawn", board[endRow][endCol].getTeam());
+			if (capturedVal == 0) {
+				board[endRow][endCol] = null;
+			}
+			else {
+				board[endRow][endCol] = new Piece(capturedNum, capturedTeam);
+			}
+			
+		}
+		
+		
 	}
 	
 	private int[] recursiveSim(ChessGame givenGame, boolean forWhite, int level, int maxLevel, int alpha, Node current) {
@@ -719,49 +931,38 @@ public class ChessGame {
 		//blackPM = new ArrayList<String>();
 		//removeBadMoves();
 		// castling stuff
-		if (move.contains("e1")) {
-			whiteCanCastleQueen = false;
-			whiteCanCastleKing = false;
+		if (whiteCanCastleQueen && move.equals("e1c1")) {
+			whiteCastled = true;
+			forceMove("a1d1");
 		}
-		else if (move.contains("a1")) {
-			whiteCanCastleQueen = false;
+		else if (whiteCanCastleKing && move.equals("e1g1")) {
+			whiteCastled = true;
+			forceMove("h1f1");
 		}
-		else if (move.contains("h1")) {
-			whiteCanCastleKing = false;
+		else if (blackCanCastleQueen && move.equals("e8c8")) {
+			blackCastled = true;
+			forceMove("a8d8");
 		}
-		else if (move.contains("e8")) {
-			blackCanCastleQueen = false;
-			blackCanCastleKing = false;
+		else if (blackCanCastleKing && move.equals("e8g8")) {
+			blackCastled = true;
+			forceMove("h8f8");
 		}
-		else if (move.contains("a8")) {
-			blackCanCastleQueen = false;
-		}
-		else if (move.contains("h8")) {
-			blackCanCastleKing = false;
-		}
-		// end first castling stuff
+		
+		if (move.contains("e1")) { whiteCanCastleQueen = false; whiteCanCastleKing = false; }
+		else if (move.contains("a1")) { whiteCanCastleQueen = false; }
+		else if (move.contains("h1")) { whiteCanCastleKing = false; }
+		else if (move.contains("e8")) { blackCanCastleQueen = false; blackCanCastleKing = false; }
+		else if (move.contains("a8")) { blackCanCastleQueen = false; }
+		else if (move.contains("h8")) { blackCanCastleKing = false; }
+		// castling stuff done
 		//System.out.println("valid move");
-		int capturedVal = forceMove(move);
+		int capturedVal = forceMove(move)[0];
 		if (whitesTurn) {
 			blackPoints -= capturedVal;
 		}
 		else {
 			whitePoints -= capturedVal;
 		}
-		// second castling stuff
-		if (move.equals("e1c1")) {
-			forceMove("a1d1");
-		}
-		else if (move.equals("e1g1")) {
-			forceMove("h1f1");
-		}
-		else if (move.equals("e8c8")) {
-			forceMove("a8d8");
-		}
-		else if (move.equals("e8g8")) {
-			forceMove("h8f8");
-		}
-		// end second castling stuff
 		whitesTurn = !whitesTurn;
 					
 	}
@@ -770,10 +971,7 @@ public class ChessGame {
 		boolean simForWhite = whitesTurn;
 		botInputMove(move);
 		//int val = simpleBoardStrength(simForWhite);
-		boolean whiteCastled = (move.equals("e1g1") || move.equals("e1c1"));
-		boolean blackCastled = (move.equals("e8g8") || move.equals("e8c8"));
-		int val = getBoardStrength(simForWhite, whiteCastled, blackCastled);
-
+		int val = getBoardStrength();//simForWhite);
 		return val;
 	}
 	
@@ -788,7 +986,8 @@ public class ChessGame {
 		
 	}
 	
-	public int getBoardStrength(boolean forWhite, boolean whiteCastled, boolean blackCastled) {
+	public int getBoardStrength() {//boolean forWhite) {
+		boolean forWhite = whitesTurn;
 		generatePressureArrays();
 		removeBadMoves();
 		int strength = 0;
@@ -883,49 +1082,38 @@ public class ChessGame {
 		valid = ind >= 0;
 		if (valid) {
 			// castling stuff
-			if (move.contains("e1")) {
-				whiteCanCastleQueen = false;
-				whiteCanCastleKing = false;
+			if (whiteCanCastleQueen && move.equals("e1c1")) {
+				whiteCastled = true;
+				forceMove("a1d1");
 			}
-			else if (move.contains("a1")) {
-				whiteCanCastleQueen = false;
+			else if (whiteCanCastleKing && move.equals("e1g1")) {
+				whiteCastled = true;
+				forceMove("h1f1");
 			}
-			else if (move.contains("h1")) {
-				whiteCanCastleKing = false;
+			else if (blackCanCastleQueen && move.equals("e8c8")) {
+				blackCastled = true;
+				forceMove("a8d8");
 			}
-			else if (move.contains("e8")) {
-				blackCanCastleQueen = false;
-				blackCanCastleKing = false;
+			else if (blackCanCastleKing && move.equals("e8g8")) {
+				blackCastled = true;
+				forceMove("h8f8");
 			}
-			else if (move.contains("a8")) {
-				blackCanCastleQueen = false;
-			}
-			else if (move.contains("h8")) {
-				blackCanCastleKing = false;
-			}
-			// end first castling stuff
+			
+			if (move.contains("e1")) { whiteCanCastleQueen = false; whiteCanCastleKing = false; }
+			else if (move.contains("a1")) { whiteCanCastleQueen = false; }
+			else if (move.contains("h1")) { whiteCanCastleKing = false; }
+			else if (move.contains("e8")) { blackCanCastleQueen = false; blackCanCastleKing = false; }
+			else if (move.contains("a8")) { blackCanCastleQueen = false; }
+			else if (move.contains("h8")) { blackCanCastleKing = false; }
+			// end castling stuff
 			//System.out.println("valid move");
-			int capturedVal = forceMove(move);
+			int capturedVal = forceMove(move)[0];
 			if (whitesTurn) {
 				blackPoints -= capturedVal;
 			}
 			else {
 				whitePoints -= capturedVal;
 			}
-			// second castling stuff
-			if (move.equals("e1c1")) {
-				forceMove("a1d1");
-			}
-			else if (move.equals("e1g1")) {
-				forceMove("h1f1");
-			}
-			else if (move.equals("e8c8")) {
-				forceMove("a8d8");
-			}
-			else if (move.equals("e8g8")) {
-				forceMove("h8f8");
-			}
-			// end second castling stuff
 			whitesTurn = !whitesTurn;
 			return ind;
 		}

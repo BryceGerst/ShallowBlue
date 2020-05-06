@@ -7,6 +7,17 @@ public class Piece{
 		this.name = name;
 		this.team = team;
 	}
+	public Piece(int num, String team) {
+		this.team = team;
+		switch (num) {
+			case 0: name = "Pawn";break;
+			case 1: name = "Knight";break;
+			case 2: name = "Bishop";break;
+			case 3: name = "Rook";break;
+			case 4: name = "Queen";break;
+			case 5: name = "King";break;
+		}
+	}
 	
 	public String toString() {
 		return "| " + team.substring(0,1) + " " + name.substring(0,2) + " |";
@@ -22,6 +33,30 @@ public class Piece{
 	
 	public Piece dupe() {
 		return new Piece(this.name, this.team);
+	}
+	
+	public int getNum() {
+		if (name.equals("Pawn")) {
+			return 0;
+		}
+		else if (name.equals("Knight")) {
+			return 1;
+		}
+		else if (name.equals("Bishop")) {
+			return 2;
+		}
+		else if (name.equals("Rook")) {
+			return 3;
+		}
+		else if (name.equals("Queen")) {
+			return 4;
+		}
+		else if (name.equals("King")) {
+			return 5;//4;
+		}
+		else {
+			return -1;
+		}
 	}
 	
 	public int getValue() {

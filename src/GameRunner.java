@@ -21,31 +21,34 @@ public class GameRunner {
 		
 		if (resp.equals("Y")) {
 			while (true) {
-				if (whiteNode == null) {
-					whiteNode = game.outputMove();
-				}
-				else {
-					whiteNode = game.outputMove(whiteNode);
-				}
-				moveInd = whiteNode.getInd();
-				//System.out.println("White: " + whiteNode.getHeight());
-				if (blackNode != null) {
-					blackNode = blackNode.goToNode(moveInd);
-				}
+//				if (whiteNode == null) {
+//					whiteNode = game.outputMove();
+//				}
+//				else {
+//					whiteNode = game.outputMove(whiteNode);
+//				}
+//				moveInd = whiteNode.getInd();
+//				//System.out.println("White: " + whiteNode.getHeight());
+//				if (blackNode != null) {
+//					blackNode = blackNode.goToNode(moveInd);
+//				}
+				
+				game.botMove();
 				System.out.println(game);
 				System.out.println("\n\n\n");
 
-				if (blackNode == null) {
-					blackNode = game.outputMove();
-				}
-				else {
-					blackNode = game.outputMove(blackNode);
-				}
-				moveInd = blackNode.getInd();
-				//System.out.println("Black: " + blackNode.getHeight());
+//				if (blackNode == null) {
+//					blackNode = game.outputMove();
+//				}
+//				else {
+//					blackNode = game.outputMove(blackNode);
+//				}
+//				moveInd = blackNode.getInd();
+//				//System.out.println("Black: " + blackNode.getHeight());
+//				
+//				whiteNode = whiteNode.goToNode(moveInd);
 				
-				whiteNode = whiteNode.goToNode(moveInd);
-				
+				game.botMove();
 				System.out.println(game);
 				System.out.println("\n\n\n");
 			}
@@ -55,15 +58,16 @@ public class GameRunner {
 				resp = input.nextLine();
 				running = !resp.equals("-1");
 				if (resp.equals("bot")) {
-					if (botNode == null) {
-						botNode = game.outputMove();
-					}
-					else {
-						botNode = game.outputMove(botNode);
-					}
+					game.botMove();
+//					if (botNode == null) {
+//						botNode = game.outputMove();
+//					}
+//					else {
+//						botNode = game.outputMove(botNode);
+//					}
 				}
 				else if (resp.equals("val")) {
-					System.out.println(game.getBoardStrength(true,false,false));
+					System.out.println(game.getBoardStrength());
 				}
 				else {
 					moveInd = game.inputMove(resp);
@@ -73,9 +77,9 @@ public class GameRunner {
 						running = !resp.equals("-1");
 						valid = game.inputMove(resp) >= 0;
 					}
-					if (botNode != null) {
-						botNode = botNode.goToNode(moveInd);
-					}
+//					if (botNode != null) {
+//						botNode = botNode.goToNode(moveInd);
+//					}
 				}
 				System.out.println(game);
 				System.out.println("\n\n\n");
