@@ -91,7 +91,10 @@ public class Piece{
 		return ret;
 	}
 	
-	public void alterPressure(int row, int col, Piece[][] board, int[][] pressure, ArrayList<String> npm) {
+	private boolean addMove;
+	
+	public void alterPressure(int row, int col, Piece[][] board, int[][] pressure, ArrayList<String> npm, boolean modifyMoves) {
+		addMove = modifyMoves;
 		String startPos = posName(row,col);
 		// PAWN STARTS HERE
 		if (name.equals("Pawn")) {
@@ -334,12 +337,12 @@ public class Piece{
 			if (board[row][col] != null) {
 				if (!board[row][col].getTeam().equals(team)) {
 					String movePos = posName(row, col);
-					npm.add(startPos+movePos);
+					if (addMove) npm.add(startPos+movePos);
 				}
 			}
 			else {
 				String movePos = posName(row, col);
-				npm.add(startPos+movePos);
+				if (addMove) npm.add(startPos+movePos);
 			}
 			pressure[row][col]++;
 		}
@@ -350,7 +353,7 @@ public class Piece{
 			if (board[row][col] != null) {
 				if (!board[row][col].getTeam().equals(team)) {
 					String movePos = posName(row, col);
-					npm.add(startPos+movePos);
+					if (addMove) npm.add(startPos+movePos);
 				}
 			}
 			pressure[row][col]++;
@@ -361,7 +364,7 @@ public class Piece{
 		if (row > -1 && row < 8 && col > -1 && col < 8) {
 			if (board[row][col] == null) {
 				String movePos = posName(row, col);
-				npm.add(startPos+movePos);
+				if (addMove) npm.add(startPos+movePos);
 			}
 		}
 	}
@@ -371,13 +374,13 @@ public class Piece{
 			if (row == 3) {
 				if (board[row][col] == null && board[row-1][col] == null) {
 					String movePos = posName(row, col);
-					npm.add(startPos+movePos);
+					if (addMove) npm.add(startPos+movePos);
 				}
 			}
 			else if (row == 4) {
 				if (board[row][col] == null && board[row+1][col] == null) {
 					String movePos = posName(row, col);
-					npm.add(startPos+movePos);
+					if (addMove) npm.add(startPos+movePos);
 				}
 			}
 		}
