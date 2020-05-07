@@ -69,13 +69,11 @@ public class GameRunner {
 				resp = input.nextLine();
 				running = !resp.equals("-1");
 				if (resp.equals("bot")) {
-					game.botMove();
-//					if (botNode == null) {
-//						botNode = game.outputMove();
-//					}
-//					else {
-//						botNode = game.outputMove(botNode);
-//					}
+					int res = game.botMove();
+					if (res == -12) {
+						running = false;
+					}
+
 				}
 				else if (resp.equals("val")) {
 					System.out.println(game.getBoardStrength());
@@ -83,31 +81,22 @@ public class GameRunner {
 				else {
 					moveInd = game.inputMove(resp);
 					boolean valid = moveInd >= 0;
+					if (moveInd == -12) {
+						valid = true;
+						running = false;
+					}
+					
 					while(!valid) {
 						resp = input.nextLine();
 						running = !resp.equals("-1");
 						valid = game.inputMove(resp) >= 0;
 					}
-//					if (botNode != null) {
-//						botNode = botNode.goToNode(moveInd);
-//					}
+
 				}
 				System.out.println(game);
 				System.out.println("\n\n\n");
 				
-	//			game.outputMove();
-	//			System.out.println(game);
-	//			System.out.println("\n\n\n");
-	//			
-	//			boolean valid = true;//false;
-	//			while(!valid) {
-	//				String resp = input.nextLine();
-	//				running = !resp.equals("-1");
-	//				valid = game.inputMove(resp);
-	//			}
-	//			game.outputMove();
-	//			System.out.println(game);
-	//			System.out.println("\n\n\n");
+
 			}
 		}
 		input.close();

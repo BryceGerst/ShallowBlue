@@ -93,7 +93,7 @@ public class Piece{
 	
 	private boolean addMove;
 	
-	public void alterPressure(int row, int col, Piece[][] board, int[][] pressure, ArrayList<String> npm, boolean modifyMoves) {
+	public void alterPressure(int row, int col, Piece[][] board, int[][] pressure, int[][] otherPressure, ArrayList<String> npm, boolean modifyMoves) {
 		addMove = modifyMoves;
 		String startPos = posName(row,col);
 		// PAWN STARTS HERE
@@ -321,14 +321,14 @@ public class Piece{
 		}
 		// KING STARTS HERE
 		else if (name.equals("King")) {
-			checkPlace(row+1,col-1,startPos,pressure,npm,board);
-			checkPlace(row+1,col,startPos,pressure,npm,board);
-			checkPlace(row+1,col+1,startPos,pressure,npm,board);
-			checkPlace(row,col-1,startPos,pressure,npm,board);
-			checkPlace(row,col+1,startPos,pressure,npm,board);
-			checkPlace(row-1,col-1,startPos,pressure,npm,board);
-			checkPlace(row-1,col,startPos,pressure,npm,board);
-			checkPlace(row-1,col+1,startPos,pressure,npm,board);
+			checkPlaceKing(row+1,col-1,startPos,pressure,otherPressure,npm,board);
+			checkPlaceKing(row+1,col,startPos,pressure,otherPressure,npm,board);
+			checkPlaceKing(row+1,col+1,startPos,pressure,otherPressure,npm,board);
+			checkPlaceKing(row,col-1,startPos,pressure,otherPressure,npm,board);
+			checkPlaceKing(row,col+1,startPos,pressure,otherPressure,npm,board);
+			checkPlaceKing(row-1,col-1,startPos,pressure,otherPressure,npm,board);
+			checkPlaceKing(row-1,col,startPos,pressure,otherPressure,npm,board);
+			checkPlaceKing(row-1,col+1,startPos,pressure,otherPressure,npm,board);
 		}
 	}
 	
@@ -345,6 +345,24 @@ public class Piece{
 				if (addMove) npm.add(startPos+movePos);
 			}
 			pressure[row][col]++;
+		}
+	}
+	
+	private void checkPlaceKing(int row, int col, String startPos, int[][] pressure, int[][] enemyPressure, ArrayList<String> npm, Piece[][] board) {
+		if (row > -1 && row < 8 && col > -1 && col < 8) {
+			if (enemyPressure[row][col] == 0) {
+				if (board[row][col] != null) {
+					if (!board[row][col].getTeam().equals(team)) {
+						String movePos = posName(row, col);
+						if (addMove) npm.add(startPos+movePos);
+					}
+				}
+				else {
+					String movePos = posName(row, col);
+					if (addMove) npm.add(startPos+movePos);
+				}
+				pressure[row][col]++;
+			}
 		}
 	}
 	

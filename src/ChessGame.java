@@ -82,10 +82,10 @@ public class ChessGame {
 					Piece current = board[row][col];
 					String team = current.getTeam();
 					if (team.equals("White")) {
-						current.alterPressure(row, col, board, whitePressure, NPM, whitesTurn);
+						current.alterPressure(row, col, board, whitePressure, blackPressure, NPM, whitesTurn);
 					}
 					else {
-						current.alterPressure(row, col, board, blackPressure, NPM, !whitesTurn);
+						current.alterPressure(row, col, board, blackPressure, whitePressure, NPM, !whitesTurn);
 					}
 				}
 			}
@@ -93,8 +93,7 @@ public class ChessGame {
 	}
 	
 	private void genTestPressure() {
-		ArrayList<String>garb1 = new ArrayList<String>();
-		ArrayList<String>garb2 = new ArrayList<String>();
+		ArrayList<String>garb = new ArrayList<String>();
 		whitePressure = new int[8][8];
 		blackPressure = new int[8][8];
 		for (int row = 0; row < 8; row++) {
@@ -103,10 +102,10 @@ public class ChessGame {
 					Piece current = board[row][col];
 					String team = current.getTeam();
 					if (team.equals("White")) {
-						current.alterPressure(row, col, board, whitePressure, garb1, false);
+						current.alterPressure(row, col, board, whitePressure, blackPressure, garb, false);
 					}
 					else {
-						current.alterPressure(row, col, board, blackPressure, garb2, false);
+						current.alterPressure(row, col, board, blackPressure, whitePressure, garb, false);
 					}
 				}
 			}
@@ -366,7 +365,7 @@ public class ChessGame {
 		return blackCanCastleQueen;
 	}
 	
-	public void botMove() {
+	public int botMove() {
 		int bestInd = alphaBetaMax(Integer.MIN_VALUE, Integer.MAX_VALUE, 5)[1];
 		
 		generatePressureArrays();
@@ -374,7 +373,7 @@ public class ChessGame {
 		System.out.println(SM);
 		String bestMove = SM.get(bestInd);
 		System.out.println(bestMove);
-		inputMove(bestMove);
+		return inputMove(bestMove);
 	}
 	
 	private int[] alphaBetaMax(int alpha, int beta, int depthLeft) {
@@ -390,18 +389,25 @@ public class ChessGame {
 			int[] moveInfo;
 			int alphaInd = 0;
 			
+			if (UM.size() == 0) {
+				return new int[] {-100000, 0};
+			}
+			
 			
 			for (int i = 0; i < UM.size(); i++) {
-				boolean priorTurn = whitesTurn;
 				testMove = UM.get(i);
 				moveInfo = makeMove(testMove);
 				score = alphaBetaMin(alpha, beta, depthLeft - 1)[0];
-				if (priorTurn == whitesTurn) {
-					System.out.println("wee woo wee woo big eror");
-				}
+				
 				unmakeMove(testMove, moveInfo);
-				if (score >= beta) return new int[] {beta, 0};
+				if (score >= beta) {
+					//System.out.println("Beta Pruned " + (UM.size() - i - 1));
+					return new int[] {beta, 0};
+				}
 				else if (score > alpha) {
+					if (score == 100000) {
+						return new int[] {score, i};
+					}
 					alpha = score;
 					alphaInd = i;
 					
@@ -424,17 +430,21 @@ public class ChessGame {
 			int[] moveInfo;
 			int betaInd = 0;
 			
+			if (UM.size() == 0) {
+				return new int[] {100000, 0};
+			}
 			
 			for (int i = 0; i < UM.size(); i++) {
 				boolean priorTurn = whitesTurn;
 				testMove = UM.get(i);
 				moveInfo = makeMove(testMove);
 				score = alphaBetaMax(alpha, beta, depthLeft - 1)[0];
-				if (priorTurn == whitesTurn) {
-					System.out.println("wee woo wee woo big eror");
-				}
+				
 				unmakeMove(testMove, moveInfo);
-				if (score <= alpha) return new int[] {alpha, 0};
+				if (score <= alpha) {
+					//System.out.println("Alpha Pruned " + (UM.size() - i - 1));
+					return new int[] {alpha, 0};
+				}
 				else if (score < beta) {
 					beta = score;
 					betaInd = i;
@@ -664,15 +674,15 @@ public class ChessGame {
 				if (board[r][c] != null) {
 					Piece current = board[r][c];
 					if (current.getType().equals("King")) {
-						if (current.getTeam().equals("Black")) {
-							if (PM.size() == 0 && whitePressure[r][c] > 0) {
-								if (forWhite) return 100000; // this means black is in checkmate, which is fantastic
-								else return -100000;
+						if (current.getTeam().equals("White")) {
+							if (PM.size() == 0 && blackPressure[r][c] > 0) {
+								if (forWhite) return -100000;
+								else return 100000;
 							}
 						}
 						else {
-							if (PM.size() == 0 && blackPressure[r][c] > 0) {
-								if (forWhite) return -100000; // this means white is in checkmate, which is bad
+							if (PM.size() == 0 && whitePressure[r][c] > 0) {
+								if (!forWhite) return -100000;
 								else return 100000;
 							}
 						}
@@ -720,10 +730,10 @@ public class ChessGame {
 		previousBoard = dupeBoard(board);
 		//Random ran = new Random();
 		generatePressureArrays();
+		removeBadMoves();
 		//printPressure("White");
 		boolean valid;
 		int ind;
-		removeBadMoves();
 		ind = SM.indexOf(move);
 		valid = ind >= 0;
 		if (valid) {
@@ -760,13 +770,31 @@ public class ChessGame {
 			else {
 				whitePoints -= capturedVal;
 			}
+			
 			whitesTurn = !whitesTurn;
+			
+			generatePressureArrays();
+			removeBadMoves();
+			if (PM.size() == 0) {
+				if (!whitesTurn) {
+					System.out.println("White wins!");
+					return -12;
+				}
+				else {
+					System.out.println("Black wins!");
+					return -12;
+				}
+			}
+			
+			
+			
 			return ind;
 		}
 		else {
 			System.out.println("illegal move");
 			return ind;
 		}
+		
 	}
 	
 	public String toString() {
