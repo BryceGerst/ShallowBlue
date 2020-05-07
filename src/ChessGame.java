@@ -453,6 +453,38 @@ public class ChessGame {
 			return new int[] {beta, betaInd};
 		}
 	}
+
+	class ChessThread extends Thread{
+		String TestMove;
+		String testMove;
+		int score;
+		int[] moveInfo;
+		int betaInd = 0;
+		int alpha;
+		int beta;
+		int depthLeft;
+		public int[]result;
+		public int i;
+		public ChessThread(String move,int a,int b,int d,int ind) {
+			TestMove=move;			
+			alpha=a;
+			beta=b;
+			depthLeft=d;
+			i=ind;
+		}
+		public void run() {
+			moveInfo = makeMove(testMove);
+			score = alphaBetaMax(alpha, beta, depthLeft - 1)[0];
+			unmakeMove(testMove, moveInfo);
+			if (score <= alpha) result= new int[] {alpha, 0};
+			else if (score < beta) {
+				beta = score;
+				betaInd = i;
+			}
+		}
+	}
+	
+
 	
 	public int[] makeMove(String move) {
 		
