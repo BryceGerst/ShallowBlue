@@ -385,8 +385,23 @@ public class ChessGame {
 		return blackCanCastleQueen;
 	}
 	
+	private long startTime;
+	private long maxTime = 60000; // 60000
+	
 	public int botMove() {
-		int bestInd = alphaBetaMax(Integer.MIN_VALUE, Integer.MAX_VALUE, 5)[1];
+		int bestInd = 0;
+		int maxDepth = 25;
+		startTime = System.currentTimeMillis();
+		for (int i = 1; i <= maxDepth; i++) { // iterative deepening
+			int testInd = alphaBetaMax(Integer.MIN_VALUE, Integer.MAX_VALUE, i)[1];
+			if (testInd != -1) {
+				bestInd = testInd;
+			}
+			else {
+				System.out.println("In one minute, searched to a depth of " + (i-1));
+				break;
+			}
+		}
 		
 		generatePressureArrays();
 		removeBadMoves();
@@ -399,6 +414,10 @@ public class ChessGame {
 	private int[] alphaBetaMax(int alpha, int beta, int depthLeft) {
 		if (depthLeft == 0) return new int[] {getBoardStrength(), 0};
 		else {
+			long endTime = System.currentTimeMillis();
+			if (endTime - startTime >= maxTime) {
+				return new int[]{0,-1};
+			}
 			generatePressureArrays();
 			removeBadMoves();
 			
@@ -406,6 +425,8 @@ public class ChessGame {
 			
 			String testMove;
 			int score;
+			int[] result;
+			int testTime;
 			int[] moveInfo;
 			int alphaInd = 0;
 			
@@ -431,7 +452,9 @@ public class ChessGame {
 						testMove = UM.get(prevBest);
 						//long prehash = boardHash;
 						moveInfo = makeMove(testMove);
-						score = alphaBetaMin(alpha, beta, depthLeft - 1)[0];
+						result = alphaBetaMin(alpha, beta, depthLeft - 1);
+						score = result[0];
+						testTime = result[1];
 						
 						unmakeMove(testMove, moveInfo);
 //						if (prehash != boardHash) {
@@ -449,7 +472,9 @@ public class ChessGame {
 							}
 							alpha = score;
 							alphaInd = prevBest;
-							
+						}
+						if (testTime == -1) {
+							return new int[] {0, -1};
 						}
 					}
 				}
@@ -463,13 +488,11 @@ public class ChessGame {
 					testMove = UM.get(i);
 					//long prehash = boardHash;
 					moveInfo = makeMove(testMove);
-					score = alphaBetaMin(alpha, beta, depthLeft - 1)[0];
+					result = alphaBetaMin(alpha, beta, depthLeft - 1);
+					score = result[0];
+					testTime = result[1];
 					
 					unmakeMove(testMove, moveInfo);
-	//				if (prehash != boardHash) {
-	//					System.out.println(testMove + " hash is not the same before and after the move (max)");
-	//					System.out.print(1/0);
-	//				}
 					
 					if (score >= beta) {
 						if (addTranspo) {
@@ -493,7 +516,9 @@ public class ChessGame {
 						}
 						alpha = score;
 						alphaInd = i;
-						
+					}
+					if (testTime == -1) {
+						return new int[] {0, -1};
 					}
 				}
 			}
@@ -510,6 +535,10 @@ public class ChessGame {
 	private int[] alphaBetaMin(int alpha, int beta, int depthLeft) {
 		if (depthLeft == 0) return new int[] {-1* getBoardStrength(), 0};
 		else {
+			long endTime = System.currentTimeMillis();
+			if (endTime - startTime >= maxTime) {
+				return new int[]{0,-1};
+			}
 			generatePressureArrays();
 			removeBadMoves();
 			
@@ -517,6 +546,8 @@ public class ChessGame {
 			
 			String testMove;
 			int score;
+			int[] result;
+			int testTime;
 			int[] moveInfo;
 			int betaInd = 0;
 			
@@ -541,8 +572,9 @@ public class ChessGame {
 					if (prevBest < UM.size()) {
 						testMove = UM.get(prevBest);
 						moveInfo = makeMove(testMove);
-						score = alphaBetaMax(alpha, beta, depthLeft - 1)[0];
-						
+						result = alphaBetaMax(alpha, beta, depthLeft - 1);
+						score = result[0];
+						testTime = result[1];
 						unmakeMove(testMove, moveInfo);
 						
 						if (score <= alpha) {
@@ -552,7 +584,9 @@ public class ChessGame {
 						else if (score < beta) {
 							beta = score;
 							betaInd = prevBest;
-							
+						}
+						if (testTime == -1) {
+							return new int[] {0, -1};
 						}
 					}
 				}
@@ -562,7 +596,9 @@ public class ChessGame {
 				if (i != prevBest) {
 					testMove = UM.get(i);
 					moveInfo = makeMove(testMove);
-					score = alphaBetaMax(alpha, beta, depthLeft - 1)[0];
+					result = alphaBetaMax(alpha, beta, depthLeft - 1);
+					score = result[0];
+					testTime = result[1];
 					unmakeMove(testMove, moveInfo);
 					
 					if (score <= alpha) {
@@ -578,6 +614,9 @@ public class ChessGame {
 					else if (score < beta) {
 						beta = score;
 						betaInd = i;
+					}
+					if (testTime == -1) {
+						return new int[] {0, -1};
 					}
 				}
 			}
