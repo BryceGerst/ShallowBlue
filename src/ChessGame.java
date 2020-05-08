@@ -1,5 +1,5 @@
 import java.util.ArrayList;
-import java.util.Random;
+import java.util.Hashtable;
 
 public class ChessGame {
 	private Piece[][] board;
@@ -21,6 +21,7 @@ public class ChessGame {
 	
 	private Hashifier hfer = new Hashifier();
 	private long boardHash;
+	Hashtable<Long, NodeInfo> transpoTable;
 	
 	private int whitePoints;
 	private int blackPoints;
@@ -48,6 +49,8 @@ public class ChessGame {
 		
 		whitePoints = 43; // 8+6+6+10+9+4
 		blackPoints = 43;
+		
+		transpoTable = new Hashtable<Long, NodeInfo>(128);
 		
 		boardHash = hfer.makeHashFrom(board);
 		System.out.println(boardHash);
@@ -410,32 +413,95 @@ public class ChessGame {
 				return new int[] {-100000, 0};
 			}
 			
+			boolean addTranspo = false;
+			int prevBest = -1;
+			NodeInfo transposition = transpoTable.get(boardHash);
+			if (transposition == null) {
+				addTranspo = true;
+			}
+			else {
+				if (boardHash != transposition.getZobrist()) {
+					addTranspo = true;
+					System.out.println("Type 1 collision");
+				}
+				else {
+					//System.out.println("remembered previous position (max)");
+					prevBest = transposition.getBestInd();
+					if (prevBest < UM.size()) {
+						testMove = UM.get(prevBest);
+						//long prehash = boardHash;
+						moveInfo = makeMove(testMove);
+						score = alphaBetaMin(alpha, beta, depthLeft - 1)[0];
+						
+						unmakeMove(testMove, moveInfo);
+//						if (prehash != boardHash) {
+//							System.out.println(testMove + " hash is not the same before and after the move (max)");
+//							System.out.print(1/0);
+//						}
+						
+						if (score >= beta) {
+							//System.out.println("Beta Pruned " + (UM.size() - i - 1));
+							return new int[] {beta, 0};
+						}
+						else if (score > alpha) {
+							if (score == 100000) {
+								return new int[] {score, prevBest};
+							}
+							alpha = score;
+							alphaInd = prevBest;
+							
+						}
+					}
+				}
+			}
+			
+			// trying the best "remembered" move first
 			
 			for (int i = 0; i < UM.size(); i++) {
-				//Piece[][] preBoard = dupeBoard(board);
-				testMove = UM.get(i);
-				//long prehash = boardHash;
-				moveInfo = makeMove(testMove);
-				score = alphaBetaMin(alpha, beta, depthLeft - 1)[0];
-				
-				unmakeMove(testMove, moveInfo);
-//				if (prehash != boardHash) {
-//					System.out.println(testMove + " hash is not the same before and after the move (max)");
-//					System.out.print(1/0);
-//				}
-				
-				if (score >= beta) {
-					//System.out.println("Beta Pruned " + (UM.size() - i - 1));
-					return new int[] {beta, 0};
-				}
-				else if (score > alpha) {
-					if (score == 100000) {
-						return new int[] {score, i};
-					}
-					alpha = score;
-					alphaInd = i;
+				if (i != prevBest) {
+					//Piece[][] preBoard = dupeBoard(board);
+					testMove = UM.get(i);
+					//long prehash = boardHash;
+					moveInfo = makeMove(testMove);
+					score = alphaBetaMin(alpha, beta, depthLeft - 1)[0];
 					
+					unmakeMove(testMove, moveInfo);
+	//				if (prehash != boardHash) {
+	//					System.out.println(testMove + " hash is not the same before and after the move (max)");
+	//					System.out.print(1/0);
+	//				}
+					
+					if (score >= beta) {
+						if (addTranspo) {
+							transpoTable.put(boardHash, new NodeInfo(i, boardHash));
+						}
+						else {
+							transpoTable.replace(boardHash, new NodeInfo(i, boardHash));
+						}
+						//System.out.println("Beta Pruned " + (UM.size() - i - 1));
+						return new int[] {beta, 0};
+					}
+					else if (score > alpha) {
+						if (score == 100000) {
+							if (addTranspo) {
+								transpoTable.put(boardHash, new NodeInfo(i, boardHash));
+							}
+							else {
+								transpoTable.replace(boardHash, new NodeInfo(i, boardHash));
+							}
+							return new int[] {score, i};
+						}
+						alpha = score;
+						alphaInd = i;
+						
+					}
 				}
+			}
+			if (addTranspo) {
+				transpoTable.put(boardHash, new NodeInfo(alphaInd, boardHash));
+			}
+			else {
+				transpoTable.replace(boardHash, new NodeInfo(alphaInd, boardHash));
 			}
 			return new int[] {alpha, alphaInd};
 		}
@@ -458,26 +524,68 @@ public class ChessGame {
 				return new int[] {100000, 0};
 			}
 			
+			boolean addTranspo = false;
+			int prevBest = -1;
+			NodeInfo transposition = transpoTable.get(boardHash);
+			if (transposition == null) {
+				addTranspo = true;
+			}
+			else {
+				if (boardHash != transposition.getZobrist()) {
+					addTranspo = true;
+					System.out.println("Type 1 collision");
+				}
+				else {
+					//System.out.println("remembered previous position (min)");
+					prevBest = transposition.getBestInd();
+					if (prevBest < UM.size()) {
+						testMove = UM.get(prevBest);
+						moveInfo = makeMove(testMove);
+						score = alphaBetaMax(alpha, beta, depthLeft - 1)[0];
+						
+						unmakeMove(testMove, moveInfo);
+						
+						if (score <= alpha) {
+							//System.out.println("Beta Pruned " + (UM.size() - i - 1));
+							return new int[] {alpha, 0};
+						}
+						else if (score < beta) {
+							beta = score;
+							betaInd = prevBest;
+							
+						}
+					}
+				}
+			}
+			
 			for (int i = 0; i < UM.size(); i++) {
-				testMove = UM.get(i);
-				//long prehash = boardHash;
-				moveInfo = makeMove(testMove);
-				score = alphaBetaMax(alpha, beta, depthLeft - 1)[0];
-				
-				unmakeMove(testMove, moveInfo);
-//				if (prehash != boardHash) {
-//					System.out.println(testMove + " hash is not the same before and after the move (min)");
-//					System.out.print(1/0);
-//				}
-				
-				if (score <= alpha) {
-					//System.out.println("Alpha Pruned " + (UM.size() - i - 1));
-					return new int[] {alpha, 0};
+				if (i != prevBest) {
+					testMove = UM.get(i);
+					moveInfo = makeMove(testMove);
+					score = alphaBetaMax(alpha, beta, depthLeft - 1)[0];
+					unmakeMove(testMove, moveInfo);
+					
+					if (score <= alpha) {
+						if (addTranspo) {
+							transpoTable.put(boardHash, new NodeInfo(i, boardHash));
+						}
+						else {
+							transpoTable.replace(boardHash, new NodeInfo(i, boardHash));
+						}
+						//System.out.println("Alpha Pruned " + (UM.size() - i - 1));
+						return new int[] {alpha, 0};
+					}
+					else if (score < beta) {
+						beta = score;
+						betaInd = i;
+					}
 				}
-				else if (score < beta) {
-					beta = score;
-					betaInd = i;
-				}
+			}
+			if (addTranspo) {
+				transpoTable.put(boardHash, new NodeInfo(betaInd, boardHash));
+			}
+			else {
+				transpoTable.replace(boardHash, new NodeInfo(betaInd, boardHash));
 			}
 			return new int[] {beta, betaInd};
 		}
