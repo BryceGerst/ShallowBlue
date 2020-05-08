@@ -393,7 +393,7 @@ public class ChessGame {
 		int maxDepth = 25;
 		startTime = System.currentTimeMillis();
 		for (int i = 1; i <= maxDepth; i++) { // iterative deepening
-			int testInd = alphaBetaMax(Integer.MIN_VALUE, Integer.MAX_VALUE, i)[1];
+			int testInd = PVS(Integer.MIN_VALUE, Integer.MAX_VALUE, i)[1];//alphaBetaMax(Integer.MIN_VALUE, Integer.MAX_VALUE, i)[1];
 			if (testInd != -1) {
 				bestInd = testInd;
 			}
@@ -409,6 +409,115 @@ public class ChessGame {
 		String bestMove = SM.get(bestInd);
 		System.out.println(bestMove);
 		return inputMove(bestMove);
+	}
+	
+	private int[] PVS(int alpha, int beta, int depthLeft) {
+		if (depthLeft <= 0) return new int[] {getBoardStrength(), 0};
+		else {
+			long endTime = System.currentTimeMillis();
+			if (endTime - startTime >= maxTime) {
+				return new int[]{0,-1};
+			}
+			generatePressureArrays();
+			removeBadMoves();
+			
+			ArrayList<String> UM = new ArrayList<String>(SM);
+			
+			String testMove;
+			int score;
+			int[] result;
+			int testTime;
+			int[] moveInfo;
+			int bestInd = 0;
+			
+			// TODO: make a boolean in instance data to check if the player going is in check, if so do the following stuff, although this code might suffice for now
+			if (UM.size() == 0) { // either a checkmate or a stalemate
+				return new int[] {getBoardStrength(), 0};
+			}
+			
+			boolean addTranspo = false;
+			int prevBest = -1;
+			int bestScore = Integer.MIN_VALUE;
+			NodeInfo transposition = transpoTable.get(boardHash);
+			if (transposition == null) {
+				addTranspo = true;
+			}
+			else {
+				if (boardHash != transposition.getZobrist()) {
+					addTranspo = true;
+					System.out.println("Type 1 collision");
+				}
+				else {
+					prevBest = transposition.getBestInd();
+					if (prevBest < UM.size()) {
+						testMove = UM.get(prevBest);
+						moveInfo = makeMove(testMove);
+						result = PVS(-1 * beta, -1 * alpha, depthLeft - 1);
+						bestScore = -1 * result[0];
+						bestInd = prevBest;
+						testTime = result[1];
+						unmakeMove(testMove, moveInfo);
+						if (testTime == -1) {
+							return new int[] {0, -1};
+						}
+						if (bestScore > alpha) {
+							if (bestScore >= beta) {
+								//System.out.println("trimmed " + (UM.size() - 1) + " items from remembering");
+								return new int[] {bestScore, prevBest};
+							}
+							alpha = bestScore;
+						}
+					}
+				}
+			}
+			for (int i = 0; i < UM.size(); i++) {
+				if (i != prevBest) {
+					testMove = UM.get(i);
+					moveInfo = makeMove(testMove);
+					result = PVS(-alpha - 1, -alpha, depthLeft - 1);
+					score = -1 * result[0];
+					testTime = result[1];
+					if (testTime == -1) {
+						unmakeMove(testMove, moveInfo);
+						return new int[] {0, -1};
+					}
+					if (score > alpha && score < beta) {
+						result = PVS(-beta, -alpha, depthLeft - 1);
+						score = -1 * result[0];
+						testTime = result[1];
+						if (testTime == -1) {
+							unmakeMove(testMove, moveInfo);
+							return new int[] {0, -1};
+						}
+						if (score > alpha) {
+							alpha = score;
+						}
+					}
+					unmakeMove(testMove, moveInfo);
+					if (score > bestScore) {
+						if (score >= beta) {
+							if (addTranspo) {
+								transpoTable.put(boardHash, new NodeInfo(i, boardHash));
+							}
+							else {
+								transpoTable.replace(boardHash, new NodeInfo(i, boardHash));
+							}
+							//System.out.println("trimmed " + ((double)(UM.size() - i - 1)/UM.size()) + "% of items the old school way");
+							return new int[] {score, i};
+						}
+						bestScore = score;
+						bestInd = i;
+					}
+				}
+			}
+			if (addTranspo) {
+				transpoTable.put(boardHash, new NodeInfo(bestInd, boardHash));
+			}
+			else {
+				transpoTable.replace(boardHash, new NodeInfo(bestInd, boardHash));
+			}
+			return new int[] {bestScore, bestInd};
+		}
 	}
 	
 	private int[] alphaBetaMax(int alpha, int beta, int depthLeft) {
@@ -455,8 +564,10 @@ public class ChessGame {
 						result = alphaBetaMin(alpha, beta, depthLeft - 1);
 						score = result[0];
 						testTime = result[1];
-						
 						unmakeMove(testMove, moveInfo);
+						if (testTime == -1) {
+							return new int[] {0, -1};
+						}
 //						if (prehash != boardHash) {
 //							System.out.println(testMove + " hash is not the same before and after the move (max)");
 //							System.out.print(1/0);
@@ -473,9 +584,7 @@ public class ChessGame {
 							alpha = score;
 							alphaInd = prevBest;
 						}
-						if (testTime == -1) {
-							return new int[] {0, -1};
-						}
+						
 					}
 				}
 			}
@@ -491,8 +600,10 @@ public class ChessGame {
 					result = alphaBetaMin(alpha, beta, depthLeft - 1);
 					score = result[0];
 					testTime = result[1];
-					
 					unmakeMove(testMove, moveInfo);
+					if (testTime == -1) {
+						return new int[] {0, -1};
+					}
 					
 					if (score >= beta) {
 						if (addTranspo) {
@@ -517,9 +628,7 @@ public class ChessGame {
 						alpha = score;
 						alphaInd = i;
 					}
-					if (testTime == -1) {
-						return new int[] {0, -1};
-					}
+					
 				}
 			}
 			if (addTranspo) {
@@ -575,8 +684,11 @@ public class ChessGame {
 						result = alphaBetaMax(alpha, beta, depthLeft - 1);
 						score = result[0];
 						testTime = result[1];
+
 						unmakeMove(testMove, moveInfo);
-						
+						if (testTime == -1) {
+							return new int[] {0, -1};
+						}
 						if (score <= alpha) {
 							//System.out.println("Beta Pruned " + (UM.size() - i - 1));
 							return new int[] {alpha, 0};
@@ -585,9 +697,7 @@ public class ChessGame {
 							beta = score;
 							betaInd = prevBest;
 						}
-						if (testTime == -1) {
-							return new int[] {0, -1};
-						}
+						
 					}
 				}
 			}
@@ -600,7 +710,9 @@ public class ChessGame {
 					score = result[0];
 					testTime = result[1];
 					unmakeMove(testMove, moveInfo);
-					
+					if (testTime == -1) {
+						return new int[] {0, -1};
+					}
 					if (score <= alpha) {
 						if (addTranspo) {
 							transpoTable.put(boardHash, new NodeInfo(i, boardHash));
@@ -615,9 +727,7 @@ public class ChessGame {
 						beta = score;
 						betaInd = i;
 					}
-					if (testTime == -1) {
-						return new int[] {0, -1};
-					}
+					
 				}
 			}
 			if (addTranspo) {
