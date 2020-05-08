@@ -3,9 +3,13 @@ import java.util.ArrayList;
 public class Piece{
 	private String name;
 	private String team;
+	private int id;
+	
 	public Piece(String name, String team){
 		this.name = name;
 		this.team = team;
+		setId();
+		
 	}
 	public Piece(int num, String team) {
 		this.team = team;
@@ -17,6 +21,22 @@ public class Piece{
 			case 4: name = "Queen";break;
 			case 5: name = "King";break;
 		}
+		setId();
+	}
+	
+	private void setId() {
+		id = 13; // not an arbitrary number, do not change. Check hashifier.java for reason behind this
+		id += getNum() * 64; // 8x8 for board size = 64
+		if (team.equals("White")) {
+			id += 0;
+		}
+		else {
+			id += 384; // 6x64
+		}
+	}
+	
+	public int getId() {
+		return id;
 	}
 	
 	public String toString() {

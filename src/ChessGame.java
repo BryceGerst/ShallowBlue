@@ -19,6 +19,9 @@ public class ChessGame {
 	private ArrayList<String> PM; // PM means possible moves, meaning the move is for sure possible
 	private ArrayList<String> SM; // SM means smart moves, meaning they don't move a piece into a position where it could be taken and doesn't take anything itself
 	
+	private Hashifier hfer = new Hashifier();
+	private long boardHash;
+	
 	private int whitePoints;
 	private int blackPoints;
 	
@@ -45,7 +48,12 @@ public class ChessGame {
 		
 		whitePoints = 43; // 8+6+6+10+9+4
 		blackPoints = 43;
+		
+		boardHash = hfer.makeHashFrom(board);
+		System.out.println(boardHash);
+		
 	}
+	
 	
 	
 	private void generateSide(int pawnRow, int kingRow, String teamColor) {
@@ -111,6 +119,15 @@ public class ChessGame {
 			}
 		}
 	}
+	
+	public long getHash() {
+		return boardHash;
+	}
+	public long getTrueHash() {
+		return hfer.makeHashFrom(board);
+	}
+	
+	
 	
 	private Piece[][] dupeBoard(Piece[][] dupeBoard) {
 		Piece[][] retBoard = new Piece[8][8];
@@ -395,11 +412,18 @@ public class ChessGame {
 			
 			
 			for (int i = 0; i < UM.size(); i++) {
+				//Piece[][] preBoard = dupeBoard(board);
 				testMove = UM.get(i);
+				//long prehash = boardHash;
 				moveInfo = makeMove(testMove);
 				score = alphaBetaMin(alpha, beta, depthLeft - 1)[0];
 				
 				unmakeMove(testMove, moveInfo);
+//				if (prehash != boardHash) {
+//					System.out.println(testMove + " hash is not the same before and after the move (max)");
+//					System.out.print(1/0);
+//				}
+				
 				if (score >= beta) {
 					//System.out.println("Beta Pruned " + (UM.size() - i - 1));
 					return new int[] {beta, 0};
@@ -435,12 +459,17 @@ public class ChessGame {
 			}
 			
 			for (int i = 0; i < UM.size(); i++) {
-				boolean priorTurn = whitesTurn;
 				testMove = UM.get(i);
+				//long prehash = boardHash;
 				moveInfo = makeMove(testMove);
 				score = alphaBetaMax(alpha, beta, depthLeft - 1)[0];
 				
 				unmakeMove(testMove, moveInfo);
+//				if (prehash != boardHash) {
+//					System.out.println(testMove + " hash is not the same before and after the move (min)");
+//					System.out.print(1/0);
+//				}
+				
 				if (score <= alpha) {
 					//System.out.println("Alpha Pruned " + (UM.size() - i - 1));
 					return new int[] {alpha, 0};
@@ -504,19 +533,27 @@ public class ChessGame {
 		
 		if (whiteCanCastleQueen && move.equals("e1c1")) {
 			whiteCastled = true;
+			boardHash = hfer.makeHashMove(boardHash, board[0][0].getId(), 0, 0, 0, 3);
 			forceMove("a1d1");
+			boardHash = hfer.castleHash(boardHash, true, false, false, false);
 		}
 		else if (whiteCanCastleKing && move.equals("e1g1")) {
 			whiteCastled = true;
+			boardHash = hfer.makeHashMove(boardHash, board[0][7].getId(), 0, 7, 0, 5);
 			forceMove("h1f1");
+			boardHash = hfer.castleHash(boardHash, false, true, false, false);
 		}
 		else if (blackCanCastleQueen && move.equals("e8c8")) {
 			blackCastled = true;
+			boardHash = hfer.makeHashMove(boardHash, board[7][0].getId(), 7, 0, 7, 3);
 			forceMove("a8d8");
+			boardHash = hfer.castleHash(boardHash, false, false, true, false);
 		}
 		else if (blackCanCastleKing && move.equals("e8g8")) {
 			blackCastled = true;
+			boardHash = hfer.makeHashMove(boardHash, board[7][7].getId(), 7, 7, 7, 5);
 			forceMove("h8f8");
+			boardHash = hfer.castleHash(boardHash, false, false, false, true);
 		}
 		
 		if (move.contains("e1")) { whiteCanCastleQueen = false; whiteCanCastleKing = false; }
@@ -526,9 +563,35 @@ public class ChessGame {
 		else if (move.contains("a8")) { blackCanCastleQueen = false; }
 		else if (move.contains("h8")) { blackCanCastleKing = false; }
 		// end first castling stuff
+		
+		int startCol = (int)move.charAt(0) - 97; // 97 is the unicode value for lower case a
+		int startRow = Integer.parseInt(move.substring(1,2)) - 1; // minus 1 for zero based indexing
+		int endCol = (int)move.charAt(2) - 97;
+		int endRow = Integer.parseInt(move.substring(3,4)) - 1;
+		int startId = board[startRow][startCol].getId();
+		if (board[endRow][endCol] != null) {
+			boardHash = hfer.makeHashMove(boardHash, board[startRow][startCol].getId(), startRow, startCol, board[endRow][endCol].getId(), endRow, endCol);
+			//System.out.println("?: " + boardHash);
+		}
+		else {
+			boardHash = hfer.makeHashMove(boardHash, board[startRow][startCol].getId(), startRow, startCol, endRow, endCol);
+			//System.out.println("current: " + boardHash);
+		}
+		
+		
 		int[] capturedInfo = forceMove(move);
+		
+		if (move.length() > 4) {
+			boardHash = hfer.makeHashPromotion(boardHash, startId, board[endRow][endCol].getId(), endRow, endCol);
+		}
+		
 		capturedVal = capturedInfo[0];
 		capturedNum = capturedInfo[1];
+		
+		
+		
+		
+		
 		info[6] = capturedVal;
 		info[7] = capturedNum;
 		if (whitesTurn) {
@@ -538,6 +601,8 @@ public class ChessGame {
 			whitePoints -= capturedVal;
 		}
 		
+		boardHash = hfer.switchHashTurn(boardHash);
+		
 		whitesTurn = !whitesTurn;
 
 		return info;
@@ -546,6 +611,8 @@ public class ChessGame {
 	
 	public void unmakeMove(String move, int[] info) {
 		// unpacking info
+		
+		boardHash = hfer.switchHashTurn(boardHash);
 		
 		whitesTurn = !whitesTurn;
 		
@@ -583,20 +650,29 @@ public class ChessGame {
 			if (whitesTurn && !whiteCastled) {
 				if (whiteCanCastleQueen && move.equals("e1c1")) {
 					forceMove("d1a1");
+					boardHash = hfer.castleHash(boardHash, true, false, false, false);
+					boardHash = hfer.makeHashMove(boardHash, board[0][0].getId(), 0, 0, 0, 3);
 				}
 				else if (whiteCanCastleKing && move.equals("e1g1")) {
 					forceMove("f1h1");
+					boardHash = hfer.castleHash(boardHash, false, true, false, false);
+					boardHash = hfer.makeHashMove(boardHash, board[0][7].getId(), 0, 7, 0, 5);
 				}
 			}
 			else if (!whitesTurn && !blackCastled) {
 				if (blackCanCastleQueen && move.equals("e8c8")) {
 					forceMove("d8a8");
+					boardHash = hfer.castleHash(boardHash, false, false, true, false);
+					boardHash = hfer.makeHashMove(boardHash, board[7][0].getId(), 7, 0, 7, 3);
 				}
 				else if (blackCanCastleKing && move.equals("e8g8")) {
 					forceMove("f8h8");
+					boardHash = hfer.castleHash(boardHash, false, false, false, true);
+					boardHash = hfer.makeHashMove(boardHash, board[7][7].getId(), 7, 7, 7, 5);
 				}
 			}
 			forceMove(antimove);
+			
 			if (capturedVal != 0) {
 				//System.out.println("I enjoy eating");
 				board[endRow][endCol] = new Piece(capturedNum, capturedTeam);
@@ -604,6 +680,7 @@ public class ChessGame {
 		}
 		else { // is a PROMO
 			board[startRow][startCol] = new Piece("Pawn", board[endRow][endCol].getTeam());
+			boardHash = hfer.makeHashPromotion(boardHash, board[startRow][startCol].getId(), board[endRow][endCol].getId(), endRow, endCol);
 			if (capturedVal == 0) {
 				board[endRow][endCol] = null;
 			}
@@ -612,6 +689,13 @@ public class ChessGame {
 				board[endRow][endCol] = new Piece(capturedNum, capturedTeam);
 			}
 			
+		}
+
+		if (board[endRow][endCol] != null) {
+			boardHash = hfer.makeHashMove(boardHash, board[startRow][startCol].getId(), startRow, startCol, board[endRow][endCol].getId(), endRow, endCol);
+		}
+		else {
+			boardHash = hfer.makeHashMove(boardHash, board[startRow][startCol].getId(), startRow, startCol, endRow, endCol);
 		}
 	}
 	
@@ -772,19 +856,27 @@ public class ChessGame {
 			// castling stuff
 			if (whiteCanCastleQueen && move.equals("e1c1")) {
 				whiteCastled = true;
+				boardHash = hfer.makeHashMove(boardHash, board[0][0].getId(), 0, 0, 0, 3);
 				forceMove("a1d1");
+				boardHash = hfer.castleHash(boardHash, true, false, false, false);
 			}
 			else if (whiteCanCastleKing && move.equals("e1g1")) {
 				whiteCastled = true;
+				boardHash = hfer.makeHashMove(boardHash, board[0][7].getId(), 0, 7, 0, 5);
 				forceMove("h1f1");
+				boardHash = hfer.castleHash(boardHash, false, true, false, false);
 			}
 			else if (blackCanCastleQueen && move.equals("e8c8")) {
 				blackCastled = true;
+				boardHash = hfer.makeHashMove(boardHash, board[7][0].getId(), 7, 0, 7, 3);
 				forceMove("a8d8");
+				boardHash = hfer.castleHash(boardHash, false, false, true, false);
 			}
 			else if (blackCanCastleKing && move.equals("e8g8")) {
 				blackCastled = true;
+				boardHash = hfer.makeHashMove(boardHash, board[7][7].getId(), 7, 7, 7, 5);
 				forceMove("h8f8");
+				boardHash = hfer.castleHash(boardHash, false, false, false, true);
 			}
 			
 			if (move.contains("e1")) { whiteCanCastleQueen = false; whiteCanCastleKing = false; }
@@ -793,9 +885,29 @@ public class ChessGame {
 			else if (move.contains("e8")) { blackCanCastleQueen = false; blackCanCastleKing = false; }
 			else if (move.contains("a8")) { blackCanCastleQueen = false; }
 			else if (move.contains("h8")) { blackCanCastleKing = false; }
-			// end castling stuff
-			//System.out.println("valid move");
+			// end first castling stuff
+			
+			int startCol = (int)move.charAt(0) - 97; // 97 is the unicode value for lower case a
+			int startRow = Integer.parseInt(move.substring(1,2)) - 1; // minus 1 for zero based indexing
+			int endCol = (int)move.charAt(2) - 97;
+			int endRow = Integer.parseInt(move.substring(3,4)) - 1;
+			int startId = board[startRow][startCol].getId();
+			if (board[endRow][endCol] != null) {
+				boardHash = hfer.makeHashMove(boardHash, board[startRow][startCol].getId(), startRow, startCol, board[endRow][endCol].getId(), endRow, endCol);
+				//System.out.println("?: " + boardHash);
+			}
+			else {
+				boardHash = hfer.makeHashMove(boardHash, board[startRow][startCol].getId(), startRow, startCol, endRow, endCol);
+				//System.out.println("current: " + boardHash);
+			}
+			
+			
 			int capturedVal = forceMove(move)[0];
+			
+			if (move.length() > 4) {
+				boardHash = hfer.makeHashPromotion(boardHash, startId, board[endRow][endCol].getId(), endRow, endCol);
+			}
+			
 			if (whitesTurn) {
 				blackPoints -= capturedVal;
 			}
@@ -804,6 +916,17 @@ public class ChessGame {
 			}
 			
 			whitesTurn = !whitesTurn;
+			
+			
+			//System.out.println("checking real: " + boardHashTest);
+			//System.out.println("checking what game sees: " + boardHash);
+			long boardHashTest = hfer.makeHashFrom(board);
+			if (boardHash != boardHashTest) {
+				System.out.println("ERROR: board hash was desynched!");
+				System.out.println("real: " + boardHashTest);
+				System.out.println("what game thought: " + boardHash);
+				boardHash = boardHashTest;
+			}
 			
 			generatePressureArrays();
 			removeBadMoves();
