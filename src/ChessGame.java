@@ -387,8 +387,12 @@ public class ChessGame {
 	
 	private long startTime;
 	private long maxTime = 60000; // 60000
+	private int totalTested;
+	private int maxTested;
 	
 	public int botMove() {
+		totalTested = 0;
+		maxTested = 0;
 		int bestInd = 0;
 		int maxDepth = 25;
 		startTime = System.currentTimeMillis();
@@ -402,6 +406,8 @@ public class ChessGame {
 				break;
 			}
 		}
+		
+		//System.out.println("Max: " + maxTested + "\nActual: " + totalTested);
 		
 		generatePressureArrays();
 		removeBadMoves();
@@ -435,6 +441,8 @@ public class ChessGame {
 				return new int[] {getBoardStrength(), 0};
 			}
 			
+			maxTested += UM.size();
+			
 			boolean addTranspo = false;
 			int prevBest = -1;
 			int bestScore = Integer.MIN_VALUE;
@@ -450,6 +458,7 @@ public class ChessGame {
 				else {
 					prevBest = transposition.getBestInd();
 					if (prevBest < UM.size()) {
+						totalTested++;
 						testMove = UM.get(prevBest);
 						moveInfo = makeMove(testMove);
 						result = PVS(-1 * beta, -1 * alpha, depthLeft - 1);
@@ -472,6 +481,7 @@ public class ChessGame {
 			}
 			for (int i = 0; i < UM.size(); i++) {
 				if (i != prevBest) {
+					totalTested++;
 					testMove = UM.get(i);
 					moveInfo = makeMove(testMove);
 					result = PVS(-alpha - 1, -alpha, depthLeft - 1);
