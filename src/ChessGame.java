@@ -54,7 +54,6 @@ public class ChessGame {
 		
 		boardHash = hfer.makeHashFrom(board);
 		System.out.println(boardHash);
-		
 	}
 	
 	
@@ -390,25 +389,36 @@ public class ChessGame {
 	private int totalTested;
 	private int maxTested;
 	
-	public int botMove() {
-		totalTested = 0;
-		maxTested = 0;
+	public int findBestMove() {
 		int bestInd = 0;
-		int maxDepth = 25;
+		int maxDepth = 5; //25
 		startTime = System.currentTimeMillis();
 		for (int i = 1; i <= maxDepth; i++) { // iterative deepening
-			int testInd = PVS(Integer.MIN_VALUE, Integer.MAX_VALUE, i)[1];//alphaBetaMax(Integer.MIN_VALUE, Integer.MAX_VALUE, i)[1];
+			int testInd = PVS(Integer.MIN_VALUE, Integer.MAX_VALUE, i)[1];
 			if (testInd != -1) {
 				bestInd = testInd;
 			}
 			else {
-				System.out.println("In one minute, searched to a depth of " + (i-1));
+				System.out.println("In " + (maxTime / 1000.0) + " seconds, searched to a depth of " + (i-1));
+				break;
+			}
+			if (i == maxDepth) {
+				System.out.println("In " + ((System.currentTimeMillis()-startTime) / 1000.0) + " seconds, searched to the max depth of " + i);
 				break;
 			}
 		}
-		
+		return bestInd;
+	}
+	
+	public int botMove() {
+		totalTested = 0;
+		maxTested = 0;
+//		long start = System.currentTimeMillis();
+//		SimThread sim1 = new SimThread(this);
+//		sim1.start();
+//		while (System.currentTimeMillis() - start < 60000) {}
+		int bestInd = findBestMove();
 		//System.out.println("Max: " + maxTested + "\nActual: " + totalTested);
-		
 		generatePressureArrays();
 		removeBadMoves();
 		System.out.println(SM);
@@ -457,7 +467,10 @@ public class ChessGame {
 				}
 				else {
 					prevBest = transposition.getBestInd();
-					if (prevBest < UM.size()) {
+					if (UM.contains(transposition.getMove())){ //prevBest < UM.size()) {
+						if (depthLeft <= transposition.getDepth()) {
+							return new int[] {transposition.getScore(), prevBest};
+						}
 						totalTested++;
 						testMove = UM.get(prevBest);
 						moveInfo = makeMove(testMove);
@@ -476,6 +489,10 @@ public class ChessGame {
 							}
 							alpha = bestScore;
 						}
+					}
+					else {
+						System.out.println("Error: with a depth left of " + depthLeft + " node contains impossible move " + prevBest + " when the max is " + UM.size());
+						System.out.println("Wants move " + transposition.getMove() + " with moves list:\n" + UM + "\nand given board\n" + this);
 					}
 				}
 			}
@@ -496,7 +513,7 @@ public class ChessGame {
 						score = -1 * result[0];
 						testTime = result[1];
 						if (testTime == -1) {
-							unmakeMove(testMove, moveInfo);
+							unmakeMove(testMove, moveInfo); // TODO: add these cut nodes to the transposition table
 							return new int[] {0, -1};
 						}
 						if (score > alpha) {
@@ -507,10 +524,10 @@ public class ChessGame {
 					if (score > bestScore) {
 						if (score >= beta) {
 							if (addTranspo) {
-								transpoTable.put(boardHash, new NodeInfo(i, boardHash));
+								transpoTable.put(boardHash, new NodeInfo(i, boardHash, depthLeft, score, testMove));
 							}
 							else {
-								transpoTable.replace(boardHash, new NodeInfo(i, boardHash));
+								transpoTable.replace(boardHash, new NodeInfo(i, boardHash, depthLeft, score, testMove));
 							}
 							//System.out.println("trimmed " + ((double)(UM.size() - i - 1)/UM.size()) + "% of items the old school way");
 							return new int[] {score, i};
@@ -521,10 +538,10 @@ public class ChessGame {
 				}
 			}
 			if (addTranspo) {
-				transpoTable.put(boardHash, new NodeInfo(bestInd, boardHash));
+				transpoTable.put(boardHash, new NodeInfo(bestInd, boardHash, depthLeft, bestScore, UM.get(bestInd)));
 			}
 			else {
-				transpoTable.replace(boardHash, new NodeInfo(bestInd, boardHash));
+				transpoTable.replace(boardHash, new NodeInfo(bestInd, boardHash, depthLeft, bestScore, UM.get(bestInd)));
 			}
 			return new int[] {bestScore, bestInd};
 		}
