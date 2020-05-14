@@ -888,18 +888,20 @@ public class ChessGame {
 				whitePoints -= capturedVal;
 			}
 			
+			boardHash = hfer.switchHashTurn(boardHash);
+			
 			whitesTurn = !whitesTurn;
 			
 			
 			//System.out.println("checking real: " + boardHashTest);
 			//System.out.println("checking what game sees: " + boardHash);
 			long boardHashTest = hfer.makeHashFrom(board);
-			if (boardHash != boardHashTest) {
-				System.out.println("ERROR: board hash was desynched!");
-				System.out.println("real: " + boardHashTest);
-				System.out.println("what game thought: " + boardHash);
-				boardHash = boardHashTest;
-			}
+//			if (boardHash != boardHashTest) {
+//				System.out.println("ERROR: board hash was desynched!");
+//				System.out.println("real: " + boardHashTest);
+//				System.out.println("what game thought: " + boardHash);
+//				boardHash = boardHashTest;
+//			}
 			
 			generatePressureArrays();
 			removeBadMoves();
