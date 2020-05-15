@@ -55,8 +55,23 @@ public class ChessGame {
 		boardHash = hfer.makeHashFrom(board);
 		System.out.println(boardHash);
 	}
+	public ChessGame(Piece[][] board, long boardHash, Hashifier hfer, boolean wK, boolean wQ, boolean wC, boolean bK, boolean bQ, boolean bC, Hashtable<Long, NodeInfo> transpoTable, boolean whitesTurn) {
+		this.board = dupeBoard(board);
+		this.boardHash = boardHash;
+		this.hfer = hfer;
+		this.transpoTable = transpoTable;
+		this.whitesTurn = whitesTurn;
+		whiteCanCastleKing = wK;
+		whiteCanCastleQueen  = wQ;
+		whiteCastled = wC;
+		blackCanCastleKing = wK;
+		blackCanCastleQueen  = wQ;
+		blackCastled = wC;
+	}
 	
-	
+	public ChessGame cloneGame() {
+		return new ChessGame(board, boardHash, hfer, whiteCanCastleKing, whiteCanCastleQueen, whiteCastled, blackCanCastleKing, blackCanCastleQueen, blackCastled, transpoTable, whitesTurn);
+	}
 	
 	private void generateSide(int pawnRow, int kingRow, String teamColor) {
 		for (int col = 0; col < 8; col++) {
@@ -389,9 +404,9 @@ public class ChessGame {
 	private int totalTested;
 	private int maxTested;
 	
-	public int findBestMove() {
+	public int findBestMove(int depth) {
 		int bestInd = 0;
-		int maxDepth = 5; //25
+		int maxDepth = depth; //25
 		startTime = System.currentTimeMillis();
 		for (int i = 1; i <= maxDepth; i++) { // iterative deepening
 			int testInd = PVS(Integer.MIN_VALUE, Integer.MAX_VALUE, i)[1];
@@ -413,11 +428,46 @@ public class ChessGame {
 	public int botMove() {
 		totalTested = 0;
 		maxTested = 0;
-//		long start = System.currentTimeMillis();
-//		SimThread sim1 = new SimThread(this);
-//		sim1.start();
-//		while (System.currentTimeMillis() - start < 60000) {}
-		int bestInd = findBestMove();
+		
+		generatePressureArrays();
+		removeBadMoves();
+		ArrayList<String> UM = new ArrayList<String>(SM);
+		String testMove;
+		int[] moveInfo;
+		int maxThreads = 1;//5;
+		SimThread[] threads = new SimThread[maxThreads];
+//		for (int i = 0; i < UM.size(); i++) {
+//			if (i < maxThreads) {
+//				testMove = UM.get(i);
+//				moveInfo = makeMove(testMove);
+//				ChessGame dupeGame = this.cloneGame();
+//				SimThread newThread = new SimThread(dupeGame);
+//				threads[i] = newThread;
+//				newThread.start();
+//				unmakeMove(testMove, moveInfo);
+//			}
+//		}
+//		findBestMove(25);
+		for (int i = 0; i < maxThreads; i++) {
+			ChessGame dupeGame = this.cloneGame();
+			SimThread newThread = new SimThread(dupeGame);
+			threads[i] = newThread;
+			newThread.start();
+		}
+		boolean allDone;
+		do {
+			allDone = true;
+			for (int i = 0; i < threads.length; i++) {
+				boolean done = threads[i].getDone();
+				if (!done) allDone = false;
+			}
+		} while(!allDone);
+		
+		
+		
+		NodeInfo root = transpoTable.get(boardHash);
+		System.out.println("Searched to a depth of " + root.getDepth());
+		int bestInd = root.getBestInd(); //findBestMove();
 		//System.out.println("Max: " + maxTested + "\nActual: " + totalTested);
 		generatePressureArrays();
 		removeBadMoves();
@@ -895,7 +945,7 @@ public class ChessGame {
 			
 			//System.out.println("checking real: " + boardHashTest);
 			//System.out.println("checking what game sees: " + boardHash);
-			long boardHashTest = hfer.makeHashFrom(board);
+//			long boardHashTest = hfer.makeHashFrom(board);
 //			if (boardHash != boardHashTest) {
 //				System.out.println("ERROR: board hash was desynched!");
 //				System.out.println("real: " + boardHashTest);
