@@ -15,53 +15,60 @@ public class GameRunner {
 //		game.unmakeMove("e2e4", info);
 //		System.out.println(game);
 		
-		
+		EvalMults defMults = new EvalMults(1, 26, 1, 2, 0); // after 10 improvements the best it found was 1,26,1,2,11 so I guess I did a pretty good job just guessing 1,25,1,3,10
+		EvalMults bestMults = defMults.dupe();
+		EvalMults testMults = defMults.dupe();
+		testMults.changeValues(10);
 		
 		System.out.print("Bot only game? (Y/N): ");
 		resp = input.nextLine();
-		
-		Node whiteNode = null;
-		Node blackNode = null;
-		
-		Node botNode = null;
+
 		
 		int moveInd;
-		
-		int turns = 0;
+		int iterations = 0;
+		int winner = -1;
 		
 		if (resp.equals("Y")) {
-			while (turns < 100) {
-				turns++;
-//				if (whiteNode == null) {
-//					whiteNode = game.outputMove();
-//				}
-//				else {
-//					whiteNode = game.outputMove(whiteNode);
-//				}
-//				moveInd = whiteNode.getInd();
-//				//System.out.println("White: " + whiteNode.getHeight());
-//				if (blackNode != null) {
-//					blackNode = blackNode.goToNode(moveInd);
-//				}
+			while (iterations < 10) {
+				game = new ChessGame();
+				boolean gameDone = false;
+				int plies = 0;
+				int result;
+				while (!gameDone && plies < 140) {
+					result = game.botMove(bestMults);
+					plies++;
+					//System.out.println(game);
+					//System.out.println("\n\n\n");
+					if (result == -13) {
+						gameDone = true;
+						winner = 1;
+					}
+					else {
+						result = game.botMove(testMults);
+						plies++;
+						//System.out.println(game);
+						//System.out.println("\n\n\n");
+						if (result == -12) {
+							gameDone = true;
+							winner = 2;
+						}
+					}
+				}
+				if (winner == 1) {
+					System.out.println("Previous best won with " + bestMults);
+				}
+				else if (winner == 2) {
+					System.out.println("Test won with " + testMults);
+					bestMults = testMults.dupe();
+					iterations++;
+				}
+				else {
+					System.out.println("Tie between previous of " + bestMults + "and test of " + testMults);
+					System.out.println(game);
+				}
+				testMults = defMults.dupe();
+				testMults.changeValues(10 - iterations);
 				
-				game.botMove();
-				System.out.println(game);
-				System.out.println("\n\n\n");
-
-//				if (blackNode == null) {
-//					blackNode = game.outputMove();
-//				}
-//				else {
-//					blackNode = game.outputMove(blackNode);
-//				}
-//				moveInd = blackNode.getInd();
-//				//System.out.println("Black: " + blackNode.getHeight());
-//				
-//				whiteNode = whiteNode.goToNode(moveInd);
-				
-				game.botMove();
-				System.out.println(game);
-				System.out.println("\n\n\n");
 			}
 		}
 		else {
@@ -69,8 +76,8 @@ public class GameRunner {
 				resp = input.nextLine();
 				running = !resp.equals("-1");
 				if (resp.equals("bot")) {
-					int res = game.botMove();
-					if (res == -12) {
+					int res = game.botMove(defMults);
+					if (res <= -12) {
 						running = false;
 					}
 
@@ -81,7 +88,7 @@ public class GameRunner {
 				else {
 					moveInd = game.inputMove(resp);
 					boolean valid = moveInd >= 0;
-					if (moveInd == -12) {
+					if (moveInd <= -12) {
 						valid = true;
 						running = false;
 					}

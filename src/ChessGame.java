@@ -400,7 +400,7 @@ public class ChessGame {
 	}
 	
 	private long startTime;
-	private long maxTime = 60000; // 60000
+	private long maxTime = 30000; // 60000
 	private int totalTested;
 	private int maxTested;
 	
@@ -425,7 +425,10 @@ public class ChessGame {
 		return bestInd;
 	}
 	
-	public int botMove() {
+	private EvalMults currentBotMults;
+	
+	public int botMove(EvalMults EM) {
+		currentBotMults = EM;
 		totalTested = 0;
 		maxTested = 0;
 		
@@ -448,32 +451,37 @@ public class ChessGame {
 //			}
 //		}
 //		findBestMove(25);
-		for (int i = 0; i < maxThreads; i++) {
-			ChessGame dupeGame = this.cloneGame();
-			SimThread newThread = new SimThread(dupeGame);
-			threads[i] = newThread;
-			newThread.start();
-		}
-		boolean allDone;
-		do {
-			allDone = true;
-			for (int i = 0; i < threads.length; i++) {
-				boolean done = threads[i].getDone();
-				if (!done) allDone = false;
-			}
-		} while(!allDone);
 		
-		
-		
-		NodeInfo root = transpoTable.get(boardHash);
-		System.out.println("Searched to a depth of " + root.getDepth());
-		int bestInd = root.getBestInd(); //findBestMove();
+//		for (int i = 0; i < maxThreads; i++) {
+//			ChessGame dupeGame = this.cloneGame();
+//			SimThread newThread = new SimThread(dupeGame);
+//			threads[i] = newThread;
+//			newThread.start();
+//		}
+//		boolean allDone;
+//		do {
+//			allDone = true;
+//			for (int i = 0; i < threads.length; i++) {
+//				boolean done = threads[i].getDone();
+//				if (!done) allDone = false;
+//			}
+//		} while(!allDone);
+//		NodeInfo root = transpoTable.get(boardHash);
+//		System.out.println("Searched to a depth of " + root.getDepth());
+//		int bestInd = root.getBestInd(); //findBestMove();
 		//System.out.println("Max: " + maxTested + "\nActual: " + totalTested);
+		
+		int bestInd = findBestMove(25);
 		generatePressureArrays();
 		removeBadMoves();
-		System.out.println(SM);
+		//System.out.println(SM);
 		String bestMove = SM.get(bestInd);
-		System.out.println(bestMove);
+		System.out.println("Doing: " + bestMove);
+		testMove = UM.get(bestInd);
+		moveInfo = makeMove(testMove);
+		NodeInfo expected = transpoTable.get(boardHash);
+		System.out.println("Expecting: " + expected.getMove());
+		unmakeMove(testMove, moveInfo);
 		return inputMove(bestMove);
 	}
 	
@@ -786,7 +794,7 @@ public class ChessGame {
 	
 	
 	
-	public int getBoardStrength() {//boolean forWhite) {
+	public int getBoardStrength() {
 		boolean forWhite = whitesTurn;
 		generatePressureArrays();
 		removeBadMoves();
@@ -794,11 +802,11 @@ public class ChessGame {
 		int pressureValue, rawValue;
 		int[][] netPressure = new int[8][8];
 		// the following comments show the values that for sure are decent-ish
-		int myTurnMult = 1; // 1;
-		int rawModifier = 25; // 15
-		int spaceValue = 1; // 1;
-		int pressureModifier = 3; // 2;
-		int castleValue = 10; // 0
+		int myTurnMult = currentBotMults.myTurnMult; // 1;
+		int rawModifier = currentBotMults.rawModifier; // 25
+		int spaceValue = currentBotMults.spaceValue; // 1;
+		int pressureModifier = currentBotMults.pressureModifier; // 3;
+		int castleValue = currentBotMults.castleValue; // 10
 		
 		if (whiteCanCastleQueen || whiteCanCastleKing || whiteCastled) {
 			strength += castleValue;
@@ -806,6 +814,7 @@ public class ChessGame {
 		if (blackCanCastleKing || blackCanCastleQueen || blackCastled) {
 			strength -= castleValue;
 		}
+		boolean stalemate = PM.size() == 0;
 		
 		for (int r = 0; r < 8; r++) {
 			for (int c = 0; c < 8; c++) {
@@ -815,14 +824,12 @@ public class ChessGame {
 					if (current.getType().equals("King")) {
 						if (current.getTeam().equals("White")) {
 							if (PM.size() == 0 && blackPressure[r][c] > 0) {
-								if (forWhite) return -100000;
-								else return 100000;
+								if (forWhite) return -100000; // getting checkmated
 							}
 						}
 						else {
 							if (PM.size() == 0 && whitePressure[r][c] > 0) {
-								if (!forWhite) return -100000;
-								else return 100000;
+								if (!forWhite) return -100000; // getting checkmated
 							}
 						}
 					}
@@ -855,6 +862,7 @@ public class ChessGame {
 				}
 			}
 		}
+		if (stalemate) return 0;
 		if (!forWhite) {
 			return strength * -1;
 		}
@@ -958,7 +966,7 @@ public class ChessGame {
 			if (PM.size() == 0) {
 				if (!whitesTurn) {
 					System.out.println("White wins!");
-					return -12;
+					return -13;
 				}
 				else {
 					System.out.println("Black wins!");
